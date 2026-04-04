@@ -1,0 +1,2208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#1a1208" />
+  <title>Roast Timer</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:        #1a1208;
+      --surface:   #231a0e;
+      --surface2:  #2e2210;
+      --border:    #3d2f14;
+      --amber:     #e8960c;
+      --amber-dim: #a66a08;
+      --cream:     #f0e6c8;
+      --muted:     #7a6240;
+      --green:     #5a8a3c;
+      --red:       #c04a2a;
+      --blue:      #3a6a9a;
+      --orange:    #d4782a;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      background: var(--bg);
+      color: var(--cream);
+      font-family: 'DM Mono', monospace;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* ── SCREENS ── */
+    .screen { display: none; flex-direction: column; min-height: 100dvh; }
+    .screen.active { display: flex; }
+
+    /* ── NAV ── */
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .nav-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.1rem;
+      color: var(--amber);
+      letter-spacing: 0.04em;
+    }
+    .nav-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      transition: all 0.15s;
+    }
+    .nav-btn:active { background: var(--surface2); color: var(--cream); }
+
+    /* ── HOME SCREEN ── */
+    #screen-home .hero {
+      padding: 32px 24px 16px;
+      text-align: center;
+    }
+    #screen-home .hero h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 2rem;
+      color: var(--amber);
+      line-height: 1.1;
+    }
+    #screen-home .hero p {
+      color: var(--muted);
+      font-size: 0.7rem;
+      margin-top: 6px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .section-label {
+      padding: 0 24px;
+      font-size: 0.62rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+      margin-top: 20px;
+    }
+
+    /* ── PROFILE GRID ── */
+    .profile-grid {
+      padding: 0 24px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .profile-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      cursor: pointer;
+      transition: all 0.15s;
+      position: relative;
+      overflow: hidden;
+    }
+    .profile-card:active { background: var(--surface2); border-color: var(--amber-dim); }
+    .profile-card .pc-name {
+      font-family: 'Playfair Display', serif;
+      font-size: 0.9rem;
+      color: var(--cream);
+      line-height: 1.2;
+      margin-bottom: 6px;
+    }
+    .profile-card .pc-details {
+      font-size: 0.65rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .profile-card .pc-batch { color: var(--amber-dim); }
+    .profile-card.dark-roast { border-color: #4a2a1a; }
+    .profile-card .pc-badge {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      font-size: 0.55rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 3px;
+      background: rgba(212, 120, 42, 0.2);
+      color: var(--orange);
+      border: 1px solid rgba(212, 120, 42, 0.3);
+    }
+
+    /* ── HOME BOTTOM LINKS ── */
+    .home-links {
+      padding: 20px 24px 12px;
+      display: flex;
+      gap: 10px;
+    }
+    .home-links button { flex: 1; }
+
+    .btn-secondary {
+      background: var(--surface);
+      color: var(--cream);
+      border: 1px solid var(--border);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.78rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+      width: 100%;
+    }
+    .btn-secondary:active { background: var(--surface2); }
+
+    .btn-primary {
+      background: var(--amber);
+      color: var(--bg);
+      border: none;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.85rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 18px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+      width: 100%;
+    }
+    .btn-primary:active { background: var(--amber-dim); transform: scale(0.98); }
+
+    /* ── RECENT ROASTS ON HOME ── */
+    .recent-list {
+      padding: 0 24px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .recent-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .recent-card:active { background: var(--surface2); }
+    .recent-card .rc-name { font-size: 0.85rem; color: var(--cream); }
+    .recent-card .rc-meta { font-size: 0.7rem; color: var(--muted); margin-top: 4px; }
+
+    /* ── PRE-ROAST OVERVIEW ── */
+    #screen-overview .content {
+      padding: 20px 24px;
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .overview-header {
+      text-align: center;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+    .overview-header h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.6rem;
+      color: var(--cream);
+    }
+    .overview-header .oh-sub {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 6px;
+      letter-spacing: 0.05em;
+    }
+
+    .cheat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .cheat-row:last-child { border-bottom: none; }
+    .cr-label {
+      font-size: 0.68rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .cr-value {
+      font-size: 0.88rem;
+      color: var(--cream);
+      text-align: right;
+    }
+    .cr-value .highlight { color: var(--amber); }
+
+    .cheat-section { margin-bottom: 20px; }
+    .cheat-section-title {
+      font-size: 0.62rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--amber-dim);
+      margin-bottom: 8px;
+      padding-top: 8px;
+    }
+
+    .overview-note {
+      background: rgba(212, 120, 42, 0.1);
+      border: 1px solid rgba(212, 120, 42, 0.25);
+      border-radius: 6px;
+      padding: 12px 14px;
+      font-size: 0.75rem;
+      color: var(--orange);
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+
+    .weight-override { margin-bottom: 20px; }
+
+    .field-label {
+      font-size: 0.65rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+      display: block;
+    }
+    .field-input {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--cream);
+      font-family: 'DM Mono', monospace;
+      font-size: 1rem;
+      padding: 14px 16px;
+      border-radius: 6px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .field-input:focus { border-color: var(--amber); }
+    .field-input::placeholder { color: var(--muted); }
+
+    .overview-footer { padding: 16px 24px 36px; }
+
+    /* ── TIMER SCREEN ── */
+    #screen-timer {
+      background: var(--bg);
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .timer-header {
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .timer-profile-name {
+      font-family: 'Playfair Display', serif;
+      font-size: 1rem;
+      color: var(--cream);
+    }
+    .timer-weight {
+      font-size: 0.68rem;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+    }
+
+    .timer-display {
+      text-align: center;
+      padding: 20px 24px 12px;
+    }
+    .timer-digits {
+      font-family: 'DM Mono', monospace;
+      font-size: 4rem;
+      font-weight: 300;
+      color: var(--amber);
+      letter-spacing: -0.02em;
+      line-height: 1;
+      transition: color 0.3s;
+    }
+    .timer-digits.running { color: var(--cream); }
+    .timer-status {
+      font-size: 0.62rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    .post-crack-timer {
+      text-align: center;
+      padding: 4px 24px 0;
+      font-size: 0.72rem;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+    }
+    .post-crack-timer .pct-time {
+      color: var(--orange);
+      font-weight: 500;
+    }
+
+    .timer-controls {
+      display: flex;
+      gap: 10px;
+      padding: 12px 24px 14px;
+    }
+    .btn-timer-start {
+      flex: 2;
+      background: var(--amber);
+      color: var(--bg);
+      border: none;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.85rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-timer-start:active { transform: scale(0.97); }
+    .btn-timer-start.paused { background: var(--green); }
+    .btn-timer-reset {
+      flex: 1;
+      background: var(--surface);
+      color: var(--muted);
+      border: 1px solid var(--border);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.8rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-timer-reset:active { background: var(--surface2); color: var(--red); }
+
+    /* ── AIRFLOW INDICATOR ── */
+    .airflow-bar {
+      margin: 0 16px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      display: flex;
+      overflow: hidden;
+    }
+    .airflow-pos {
+      flex: 1;
+      text-align: center;
+      padding: 9px 6px;
+      font-size: 0.65rem;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      transition: all 0.3s;
+      border-right: 1px solid var(--border);
+    }
+    .airflow-pos:last-child { border-right: none; }
+    .airflow-pos.active {
+      background: rgba(232, 150, 12, 0.15);
+      color: var(--amber);
+      font-weight: 500;
+    }
+    .airflow-label {
+      font-size: 0.55rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 0 16px 5px;
+    }
+
+    /* ── GUIDE TABLE ── */
+    .guide-panel {
+      margin: 0 16px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .guide-title {
+      padding: 10px 14px;
+      font-size: 0.6rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--amber-dim);
+      border-bottom: 1px solid var(--border);
+      background: rgba(0,0,0,0.1);
+    }
+
+    .guide-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .guide-table th {
+      font-size: 0.6rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--cream);
+      opacity: 0.6;
+      padding: 10px 6px;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+      background: rgba(0,0,0,0.08);
+    }
+    .guide-table th:first-child { text-align: left; padding-left: 12px; }
+
+    .guide-table td {
+      font-size: 0.82rem;
+      font-weight: 400;
+      padding: 11px 6px;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+      color: var(--cream);
+    }
+    .guide-table td:first-child { text-align: left; padding-left: 12px; }
+    .guide-table tr:last-child td { border-bottom: none; }
+
+    /* Row states */
+    .guide-table tr.row-completed td { color: var(--cream); opacity: 0.45; }
+    .guide-table tr.row-completed td:first-child { opacity: 0.7; }
+    .guide-table tr.row-completed .row-status { color: var(--green); opacity: 1; }
+
+    .guide-table tr.row-current { background: rgba(232, 150, 12, 0.1); }
+    .guide-table tr.row-current td { color: var(--cream); font-weight: 500; }
+    .guide-table tr.row-current .row-status { color: var(--amber); }
+    .guide-table tr.row-current .row-cue { color: var(--amber); font-weight: 500; }
+
+    .guide-table tr.row-upcoming td { color: var(--cream); opacity: 0.4; }
+    .guide-table tr.row-upcoming td:first-child { opacity: 0.6; }
+
+    .row-status { width: 20px; font-size: 0.8rem; }
+    .row-cue { font-size: 0.85rem; white-space: nowrap; }
+    .row-gas { color: var(--amber); font-weight: 500; }
+    .row-airflow { font-size: 0.75rem; letter-spacing: 0.03em; }
+
+    /* Event row colors */
+    tr.row-fc .row-cue { color: #8fcc6a; }
+    tr.row-sc .row-cue { color: #e07a5a; }
+    tr.row-drop .row-cue { color: #6aacde; }
+
+    /* Tappable rows */
+    .guide-table tr.tappable { cursor: pointer; }
+    .guide-table tr.tappable:active td { background: var(--surface2); }
+
+    /* Expand row (input row shown below tapped step) */
+    .expand-row td {
+      padding: 8px 12px 12px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(232, 150, 12, 0.04);
+    }
+    .expand-inner {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    .expand-detail {
+      width: 100%;
+      font-size: 0.73rem;
+      color: var(--cream);
+      opacity: 0.7;
+      line-height: 1.5;
+      margin-bottom: 6px;
+    }
+    .step-temp-input {
+      width: 72px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--cream);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.85rem;
+      padding: 8px 8px;
+      border-radius: 4px;
+      outline: none;
+      text-align: center;
+    }
+    .step-temp-input:focus { border-color: var(--amber); }
+    .step-temp-input::placeholder { color: var(--muted); font-size: 0.7rem; }
+    .step-unit { font-size: 0.72rem; color: var(--muted); }
+
+    .step-btn {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 8px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      border: 1px solid;
+      transition: all 0.15s;
+    }
+    .step-btn:active { transform: scale(0.95); }
+    .step-btn-log {
+      background: var(--amber);
+      color: var(--bg);
+      border-color: var(--amber);
+    }
+    .step-btn-skip {
+      background: none;
+      color: var(--muted);
+      border-color: var(--border);
+    }
+    .step-btn-cancel {
+      background: none;
+      color: var(--muted);
+      border-color: var(--border);
+    }
+
+    /* ── LIVE LOG ── */
+    .live-log {
+      margin: 0 16px 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .live-log-title {
+      padding: 10px 14px;
+      font-size: 0.6rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      background: rgba(0,0,0,0.1);
+    }
+    .live-log-empty {
+      padding: 14px;
+      font-size: 0.72rem;
+      color: var(--muted);
+      text-align: center;
+    }
+    .log-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 14px;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.72rem;
+    }
+    .log-row:last-child { border-bottom: none; }
+    .log-row .lr-label { color: var(--cream); }
+    .log-row .lr-right { text-align: right; }
+    .log-row .lr-time { color: var(--amber); }
+    .log-row .lr-detail { color: var(--muted); font-size: 0.65rem; margin-top: 2px; }
+
+    /* ── SUMMARY SCREEN ── */
+    #screen-summary .content {
+      padding: 24px;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .summary-hero {
+      text-align: center;
+      padding: 20px 0 24px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+    }
+    .summary-bean {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.6rem;
+      color: var(--cream);
+    }
+    .summary-date {
+      font-size: 0.7rem;
+      color: var(--muted);
+      margin-top: 6px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px;
+    }
+    .stat-card.full-width { grid-column: 1 / -1; }
+    .stat-label {
+      font-size: 0.6rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .stat-value {
+      font-size: 1.4rem;
+      font-weight: 300;
+      color: var(--amber);
+      line-height: 1;
+    }
+    .stat-sub {
+      font-size: 0.68rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .events-timeline { margin-bottom: 20px; }
+    .et-label {
+      font-size: 0.62rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+    .et-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .et-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .et-dot.fc { background: var(--green); }
+    .et-dot.sc { background: var(--red); }
+    .et-dot.drop { background: var(--blue); }
+    .et-dot.cp { background: var(--amber); }
+    .et-name { font-size: 0.8rem; color: var(--cream); flex: 1; }
+    .et-info { text-align: right; }
+    .et-time { font-size: 0.8rem; color: var(--amber); }
+    .et-temp { font-size: 0.68rem; color: var(--muted); margin-top: 2px; }
+
+    .notes-section { margin-bottom: 24px; }
+    .notes-area {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--cream);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.85rem;
+      padding: 14px 16px;
+      border-radius: 6px;
+      outline: none;
+      resize: none;
+      min-height: 80px;
+      line-height: 1.5;
+      transition: border-color 0.15s;
+    }
+    .notes-area:focus { border-color: var(--amber); }
+
+    .summary-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 0 24px 40px;
+    }
+
+    .weight-out-section {
+      margin-bottom: 20px;
+    }
+    .weight-out-row {
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+    }
+    .weight-out-row > div { flex: 1; }
+    .weight-loss-display {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px 16px;
+      text-align: center;
+    }
+    .weight-loss-value {
+      font-size: 1.1rem;
+      color: var(--amber);
+      font-weight: 300;
+    }
+    .weight-loss-label {
+      font-size: 0.58rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* ── HISTORY SCREEN ── */
+    #screen-history .content {
+      padding: 0 24px 24px;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    /* Filter bar */
+    .history-controls {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      background: var(--bg);
+      padding: 14px 0 10px;
+    }
+    .filter-bar {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 4px;
+      scrollbar-width: none;
+    }
+    .filter-bar::-webkit-scrollbar { display: none; }
+    .filter-pill {
+      flex-shrink: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--cream);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.68rem;
+      letter-spacing: 0.05em;
+      padding: 7px 14px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .filter-pill:active { background: var(--surface2); }
+    .filter-pill.active {
+      background: var(--amber);
+      border-color: var(--amber);
+      color: var(--bg);
+      font-weight: 500;
+    }
+    .sort-toggle {
+      display: flex;
+      gap: 0;
+      margin-top: 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .sort-btn {
+      flex: 1;
+      background: var(--surface);
+      border: none;
+      border-right: 1px solid var(--border);
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.62rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .sort-btn:last-child { border-right: none; }
+    .sort-btn.active {
+      background: var(--surface2);
+      color: var(--cream);
+      font-weight: 500;
+    }
+
+    /* Group headers */
+    .history-group-header {
+      font-size: 0.62rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--amber-dim);
+      padding: 16px 0 8px;
+    }
+    .history-group-header:first-child { padding-top: 8px; }
+
+    .history-empty {
+      text-align: center;
+      padding: 60px 24px;
+      color: var(--muted);
+      font-size: 0.8rem;
+      line-height: 1.8;
+    }
+    .history-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 16px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .history-card:active { background: var(--surface2); }
+    .hc-header { display: flex; justify-content: space-between; align-items: flex-start; }
+    .hc-bean { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--cream); }
+    .hc-date { font-size: 0.68rem; color: var(--muted); text-align: right; }
+    .hc-stats { display: flex; gap: 16px; margin-top: 10px; }
+    .hc-stat { font-size: 0.72rem; }
+    .hc-stat-label { color: var(--muted); }
+    .hc-stat-value { color: var(--amber); margin-left: 4px; }
+
+    /* ── ROAST DETAIL SCREEN ── */
+    #screen-detail .content {
+      padding: 24px;
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .detail-hero {
+      text-align: center;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+    .detail-hero h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.5rem;
+      color: var(--cream);
+    }
+    .detail-hero .dh-date {
+      font-size: 0.7rem;
+      color: var(--muted);
+      margin-top: 6px;
+      letter-spacing: 0.08em;
+    }
+
+    .detail-section {
+      margin-bottom: 22px;
+    }
+    .detail-section-title {
+      font-size: 0.6rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--amber-dim);
+      margin-bottom: 10px;
+    }
+
+    .detail-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 22px;
+    }
+    .detail-stat {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px;
+    }
+    .ds-label {
+      font-size: 0.58rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 5px;
+    }
+    .ds-value {
+      font-size: 1.3rem;
+      font-weight: 300;
+      color: var(--amber);
+      line-height: 1;
+    }
+    .ds-sub {
+      font-size: 0.66rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .detail-timeline {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .dt-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .dt-row:last-child { border-bottom: none; }
+    .dt-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .dt-dot.fc { background: var(--green); }
+    .dt-dot.sc { background: var(--red); }
+    .dt-dot.drop { background: var(--blue); }
+    .dt-dot.cp { background: var(--amber); }
+    .dt-label { font-size: 0.8rem; color: var(--cream); flex: 1; }
+    .dt-info { text-align: right; }
+    .dt-time { font-size: 0.8rem; color: var(--amber); }
+    .dt-extra { font-size: 0.66rem; color: var(--muted); margin-top: 2px; }
+
+    .detail-notes-area {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--cream);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.85rem;
+      padding: 14px 16px;
+      border-radius: 6px;
+      outline: none;
+      resize: none;
+      min-height: 80px;
+      line-height: 1.5;
+      transition: border-color 0.15s;
+    }
+    .detail-notes-area:focus { border-color: var(--amber); }
+
+    .detail-saved-msg {
+      font-size: 0.68rem;
+      color: var(--green);
+      margin-top: 6px;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .detail-saved-msg.visible { opacity: 1; }
+
+    .detail-footer {
+      padding: 16px 24px 36px;
+    }
+    .btn-danger {
+      background: none;
+      color: var(--red);
+      border: 1px solid var(--red);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.78rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+      width: 100%;
+    }
+    .btn-danger:active { background: rgba(192, 74, 42, 0.2); }
+
+    /* ── BEAN MANAGER ── */
+    #screen-beans .content {
+      padding: 16px 24px;
+      flex: 1;
+      overflow-y: auto;
+    }
+    .bean-mgr-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 16px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .bmc-name { font-size: 0.9rem; color: var(--cream); }
+    .bmc-notes { font-size: 0.72rem; color: var(--muted); margin-top: 3px; }
+    .bmc-delete {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      padding: 6px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .bmc-delete:active { border-color: var(--red); color: var(--red); }
+
+    /* ── ADD BEAN MODAL ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      padding: 24px;
+      backdrop-filter: blur(4px);
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-sheet {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      width: 100%;
+      max-width: 400px;
+    }
+    .modal-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.2rem;
+      color: var(--amber);
+      margin-bottom: 20px;
+    }
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .modal-actions .btn-primary { flex: 2; padding: 14px; }
+    .modal-actions .btn-secondary { flex: 1; padding: 14px; }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     HOME SCREEN
+══════════════════════════════════════ -->
+<div id="screen-home" class="screen active">
+  <div class="hero">
+    <h1>Roast Timer</h1>
+    <p>Select a profile to begin</p>
+  </div>
+  <div class="section-label">Profiles</div>
+  <div class="profile-grid" id="profile-grid"></div>
+
+  <div class="home-links">
+    <button class="btn-secondary" onclick="showScreen('history')">History</button>
+    <button class="btn-secondary" onclick="showScreen('beans')">Beans</button>
+  </div>
+
+  <div class="section-label" id="recent-label" style="display:none;">Recent Roasts</div>
+  <div class="recent-list" id="recent-list"></div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PRE-ROAST OVERVIEW
+══════════════════════════════════════ -->
+<div id="screen-overview" class="screen">
+  <nav>
+    <button class="nav-btn" onclick="showScreen('home')">← Back</button>
+    <span class="nav-title">Roast Profile</span>
+    <span></span>
+  </nav>
+  <div class="content" id="overview-content"></div>
+  <div class="overview-footer">
+    <button class="btn-primary" onclick="beginRoast()">Begin Roast →</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     TIMER SCREEN
+══════════════════════════════════════ -->
+<div id="screen-timer" class="screen">
+  <div class="timer-header">
+    <div>
+      <div class="timer-profile-name" id="timer-profile-name">—</div>
+      <div class="timer-weight" id="timer-weight-display">—</div>
+    </div>
+    <button class="nav-btn" onclick="confirmAbort()">Abort</button>
+  </div>
+
+  <div class="timer-display">
+    <div class="timer-digits" id="timer-digits">00:00</div>
+    <div class="timer-status" id="timer-status">Ready to roast</div>
+  </div>
+
+  <div id="post-crack-display" class="post-crack-timer" style="display:none;"></div>
+
+  <div class="timer-controls">
+    <button class="btn-timer-start" id="btn-start-pause" onclick="toggleTimer()">Start</button>
+    <button class="btn-timer-reset" onclick="resetTimer()">Reset</button>
+  </div>
+
+  <div class="airflow-label">Airflow</div>
+  <div class="airflow-bar" id="airflow-bar">
+    <div class="airflow-pos active" id="af-cooling">✕ Cooling</div>
+    <div class="airflow-pos" id="af-5050">50/50</div>
+    <div class="airflow-pos" id="af-drum">→ Drum</div>
+  </div>
+
+  <div class="guide-panel" id="guide-panel">
+    <div class="guide-title">Roast Guide</div>
+  </div>
+
+  <div class="live-log" id="live-log">
+    <div class="live-log-title">Live Log</div>
+    <div class="live-log-empty" id="live-log-empty">No events yet.</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SUMMARY SCREEN
+══════════════════════════════════════ -->
+<div id="screen-summary" class="screen">
+  <nav>
+    <span></span>
+    <span class="nav-title">Roast Complete</span>
+    <span></span>
+  </nav>
+  <div class="content">
+    <div class="summary-hero">
+      <div class="summary-bean" id="sum-bean">—</div>
+      <div class="summary-date" id="sum-date">—</div>
+    </div>
+
+    <div class="stats-grid" id="stats-grid"></div>
+    <div class="events-timeline" id="events-timeline"></div>
+
+    <div class="weight-out-section">
+      <span class="field-label">Roasted Weight (g)</span>
+      <div class="weight-out-row">
+        <div>
+          <input class="field-input" id="sum-end-weight" type="number" inputmode="decimal" placeholder="e.g. 2300" oninput="calcWeightLoss()" />
+        </div>
+        <div>
+          <div class="weight-loss-display" id="weight-loss-display">
+            <div class="weight-loss-value" id="weight-loss-value">—</div>
+            <div class="weight-loss-label">Weight Loss</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="notes-section">
+      <span class="field-label">Tasting Notes</span>
+      <textarea class="notes-area" id="sum-notes" placeholder="How did it turn out? Any observations..."></textarea>
+    </div>
+  </div>
+  <div class="summary-actions">
+    <button class="btn-primary" onclick="saveRoast()">Save Roast</button>
+    <button class="btn-secondary" onclick="discardRoast()">Discard</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     ROAST DETAIL SCREEN
+══════════════════════════════════════ -->
+<div id="screen-detail" class="screen">
+  <nav>
+    <button class="nav-btn" id="detail-back-btn" onclick="goBackFromDetail()">← Back</button>
+    <span class="nav-title">Roast Detail</span>
+    <span></span>
+  </nav>
+  <div class="content" id="detail-content"></div>
+  <div class="detail-footer">
+    <button class="btn-danger" id="btn-delete-roast">Delete Roast</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     HISTORY SCREEN
+══════════════════════════════════════ -->
+<div id="screen-history" class="screen">
+  <nav>
+    <button class="nav-btn" onclick="showScreen('home')">← Back</button>
+    <span class="nav-title">History</span>
+    <span></span>
+  </nav>
+  <div class="content">
+    <div class="history-controls" id="history-controls"></div>
+    <div id="history-list"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     BEANS SCREEN
+══════════════════════════════════════ -->
+<div id="screen-beans" class="screen">
+  <nav>
+    <button class="nav-btn" onclick="showScreen('home')">← Back</button>
+    <span class="nav-title">Bean Profiles</span>
+    <button class="nav-btn" onclick="showAddBeanModal()">+ Add</button>
+  </nav>
+  <div class="content" id="beans-content"></div>
+</div>
+
+<!-- ══════════════════════════════════════
+     ADD BEAN MODAL
+══════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-add-bean">
+  <div class="modal-sheet">
+    <div class="modal-title">New Bean Profile</div>
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div>
+        <span class="field-label">Bean Name / Origin</span>
+        <input class="field-input" id="new-bean-name" placeholder="e.g. Ethiopia Yirgacheffe" />
+      </div>
+      <div>
+        <span class="field-label">Notes (optional)</span>
+        <input class="field-input" id="new-bean-notes" placeholder="e.g. natural process, floral" />
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="saveNewBean()">Save Bean</button>
+      <button class="btn-secondary" onclick="closeAddBeanModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════
+// PROFILES — all 11 roast recipes
+// ══════════════════════════════════════
+const DEFAULT_PROFILES = [
+  {
+    id: 'kona_100', name: '100% Kona', batchGrams: 2750, chargeTempF: 410, chargeGas: 0,
+    earlyGas: { '30s': 5, '60s': 10 }, gasAt50_50: 10,
+    rampDown: [{ tempF: 350, gas: 9 },{ tempF: 360, gas: 8 },{ tempF: 370, gas: 7 },{ tempF: 380, gas: 6 }],
+    firstCrackExpectedF: '385–395', postFirstCrackGas: 10,
+    dropTargetTempF: '425–430°F', dropPostCrackTime: '~3:30',
+    trackSecondCrack: false, isDarkRoast: false, notes: ''
+  },
+  {
+    id: 'light', name: 'Light Roast', batchGrams: 2200, chargeTempF: 380, chargeGas: 0,
+    earlyGas: { '30s': 4, '60s': 8 }, gasAt50_50: 9,
+    rampDown: [{ tempF: 360, gas: 8 },{ tempF: 370, gas: 7 },{ tempF: 380, gas: 6 }],
+    firstCrackExpectedF: '385–395', postFirstCrackGas: 10,
+    dropTargetTempF: '~415°F', dropPostCrackTime: '2:00–2:15 MAX',
+    trackSecondCrack: false, isDarkRoast: false,
+    notes: 'Strictly enforce post-crack time limit. Lowest drop temp — intentional.'
+  },
+  {
+    id: 'maui_mokka', name: 'Maui Mokka', batchGrams: 2200, chargeTempF: 380, chargeGas: 0,
+    earlyGas: { '30s': 4, '60s': 8 }, gasAt50_50: 9,
+    rampDown: [{ tempF: 350, gas: 8 },{ tempF: 360, gas: 7 },{ tempF: 370, gas: 6 },{ tempF: 380, gas: 5 }],
+    firstCrackExpectedF: '~385', postFirstCrackGas: 10,
+    dropTargetTempF: '~425°F', dropPostCrackTime: '~2:30',
+    trackSecondCrack: false, isDarkRoast: false,
+    notes: 'Newest profile — subject to change. First crack very difficult to hear.', badge: 'beta'
+  },
+  {
+    id: 'waialua_peaberry', name: 'Waialua Peaberry', batchGrams: 1100, chargeTempF: 300, chargeGas: 0,
+    earlyGas: { '30s': 3, '60s': 6 }, gasAt50_50: 9,
+    rampDown: [{ tempF: 350, gas: 7 },{ tempF: 360, gas: 6 },{ tempF: 370, gas: 5 }],
+    firstCrackExpectedF: '~375', postFirstCrackGas: 8,
+    dropTargetTempF: '425–430°F', dropPostCrackTime: '~4:00',
+    trackSecondCrack: false, isDarkRoast: false,
+    notes: 'Most variable batch size. FC earlier than most. Primary cue is time post-crack.'
+  },
+  {
+    id: 'kau_100', name: '100% Kau', batchGrams: 1100, chargeTempF: 300, chargeGas: 0,
+    earlyGas: { '30s': 3, '60s': 6 }, gasAt50_50: 9,
+    rampDown: [{ tempF: 350, gas: 8 },{ tempF: 360, gas: 7 },{ tempF: 370, gas: 6 },{ tempF: 380, gas: 5 }],
+    firstCrackExpectedF: '~390', postFirstCrackGas: 7,
+    dropTargetTempF: '425–430°F', dropPostCrackTime: '~3:30',
+    trackSecondCrack: false, isDarkRoast: false, notes: ''
+  },
+  {
+    id: 'waialua_med', name: 'Waialua Medium', batchGrams: 2750, chargeTempF: 410, chargeGas: 0,
+    earlyGas: { '30s': 5, '60s': 10 }, gasAt50_50: 10,
+    rampDown: [{ tempF: 350, gas: 9 },{ tempF: 360, gas: 8 },{ tempF: 370, gas: 7 },{ tempF: 380, gas: 6 }],
+    firstCrackExpectedF: '385–395', postFirstCrackGas: 10,
+    dropTargetTempF: '425–430°F', dropPostCrackTime: '~4:00',
+    trackSecondCrack: false, isDarkRoast: false, notes: ''
+  },
+  {
+    id: 'downtown', name: 'Downtown Blend', batchGrams: 2750, chargeTempF: 410, chargeGas: 0,
+    earlyGas: { '30s': 5, '60s': 10 }, gasAt50_50: 10,
+    rampDown: [{ tempF: 350, gas: 9 },{ tempF: 360, gas: 8 },{ tempF: 370, gas: 7 },{ tempF: 380, gas: 6 }],
+    firstCrackExpectedF: '~385', postFirstCrackGas: 10,
+    dropTargetTempF: '420–430°F', dropPostCrackTime: '~3:30',
+    trackSecondCrack: false, isDarkRoast: false, notes: 'Signature blend.'
+  },
+  {
+    id: 'med_blend', name: 'Medium Roast Blend', batchGrams: 2750, chargeTempF: 410, chargeGas: 0,
+    earlyGas: { '30s': 5, '60s': 10 }, gasAt50_50: 10,
+    rampDown: [{ tempF: 350, gas: 9 },{ tempF: 360, gas: 8 },{ tempF: 370, gas: 7 },{ tempF: 380, gas: 6 }],
+    firstCrackExpectedF: '385–395', postFirstCrackGas: 10,
+    dropTargetTempF: '~423°F', dropPostCrackTime: '3:30–4:00',
+    trackSecondCrack: false, isDarkRoast: false, notes: ''
+  },
+  {
+    id: 'kauai_60', name: '60% Kauai Blend', batchGrams: 2750, chargeTempF: 410, chargeGas: 0,
+    earlyGas: { '30s': 5, '60s': 10 }, gasAt50_50: 10,
+    rampDown: [{ tempF: 360, gas: 9 },{ tempF: 370, gas: 8 },{ tempF: 380, gas: 7 }],
+    firstCrackExpectedF: '385–395', postFirstCrackGas: 10,
+    dropTargetTempF: '425–430°F', dropPostCrackTime: '~3:00',
+    trackSecondCrack: false, isDarkRoast: false,
+    notes: 'Ramp down starts later (360°F).'
+  },
+  {
+    id: 'kona_20', name: '20% Kona Blend', batchGrams: 2750, chargeTempF: 410, chargeGas: 0,
+    earlyGas: { '30s': 5, '60s': 10 }, gasAt50_50: 10,
+    rampDown: [{ tempF: 350, gas: 9 },{ tempF: 360, gas: 8 },{ tempF: 370, gas: 7 },{ tempF: 380, gas: 6 }],
+    firstCrackExpectedF: '385–395', postFirstCrackGas: 10,
+    dropTargetTempF: '425–430°F', dropPostCrackTime: '~3:00',
+    trackSecondCrack: false, isDarkRoast: false, notes: ''
+  },
+  {
+    id: 'dark', name: 'Dark Roast', batchGrams: 2800, chargeTempF: 400, chargeGas: 8,
+    earlyGas: null, gasAt50_50: 7, rampDown: null,
+    firstCrackExpectedF: '385–395', postFirstCrackGas: 6,
+    dropTargetTempF: '>440°F', dropPostCrackTime: '2:00 after 2nd crack',
+    trackSecondCrack: true, isDarkRoast: true,
+    secondCrackExpectedF: '425–430', secondCrackGas: 5,
+    notes: 'Event-driven. No ramp down. Starts at gas 8. Second crack hard to hear.'
+  }
+];
+
+// ══════════════════════════════════════
+// STATE
+// ══════════════════════════════════════
+let timerInterval = null;
+let timerSeconds = 0;
+let timerRunning = false;
+let currentRoast = null;
+let selectedProfile = null;
+let cueList = [];
+let currentCueIndex = 0;
+let expandedEventIndex = -1; // which event step is expanded (-1 = none)
+let firstCrackSeconds = null;
+let secondCrackSeconds = null;
+
+// ══════════════════════════════════════
+// STORAGE
+// ══════════════════════════════════════
+function getProfiles() { return JSON.parse(localStorage.getItem('rt_profiles') || '[]'); }
+function saveProfiles(p) { localStorage.setItem('rt_profiles', JSON.stringify(p)); }
+function getBeans() { return JSON.parse(localStorage.getItem('rt_beans') || '[]'); }
+function saveBeans(beans) { localStorage.setItem('rt_beans', JSON.stringify(beans)); }
+function getRoasts() { return JSON.parse(localStorage.getItem('rt_roasts') || '[]'); }
+function saveRoasts(roasts) { localStorage.setItem('rt_roasts', JSON.stringify(roasts)); }
+function seedProfiles() { if (getProfiles().length === 0) saveProfiles(DEFAULT_PROFILES); }
+
+// ══════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+  if (id === 'home') renderHome();
+  if (id === 'history') renderHistory();
+  if (id === 'beans') renderBeans();
+}
+
+// ══════════════════════════════════════
+// HOME
+// ══════════════════════════════════════
+function renderHome() {
+  const profiles = getProfiles();
+  document.getElementById('profile-grid').innerHTML = profiles.map(p => `
+    <div class="profile-card ${p.isDarkRoast ? 'dark-roast' : ''}" onclick="selectProfile('${p.id}')">
+      ${p.badge ? `<span class="pc-badge">${p.badge}</span>` : ''}
+      <div class="pc-name">${p.name}</div>
+      <div class="pc-details"><span class="pc-batch">${p.batchGrams}g</span> · ${p.chargeTempF}°F</div>
+    </div>
+  `).join('');
+
+  const roasts = getRoasts().slice().reverse().slice(0, 3);
+  const recentLabel = document.getElementById('recent-label');
+  const recentList = document.getElementById('recent-list');
+  if (!roasts.length) {
+    recentLabel.style.display = 'none';
+    recentList.innerHTML = '';
+    return;
+  }
+  recentLabel.style.display = 'block';
+  recentList.innerHTML = roasts.map(r => `
+    <div class="recent-card" onclick="viewRoast('${r.id}', 'home')">
+      <div class="rc-name">${r.profileName || r.beanName || 'Unknown'}</div>
+      <div class="rc-meta">${formatDate(r.savedAt)} · ${r.weight || r.batchGrams || '?'}g · ${formatTime(r.totalSeconds)}</div>
+    </div>
+  `).join('');
+}
+
+// ══════════════════════════════════════
+// PRE-ROAST OVERVIEW
+// ══════════════════════════════════════
+function selectProfile(id) {
+  selectedProfile = getProfiles().find(p => p.id === id);
+  if (!selectedProfile) return;
+  renderOverview();
+  showScreen('overview');
+}
+
+function renderOverview() {
+  const p = selectedProfile;
+  let html = `
+    <div class="overview-header">
+      <h2>${p.name}</h2>
+      <div class="oh-sub">${p.batchGrams}g batch · ${p.isDarkRoast ? 'Dark roast process' : 'Standard process'}</div>
+    </div>
+  `;
+  if (p.notes) html += `<div class="overview-note">${p.notes}</div>`;
+
+  html += `<div class="cheat-section">
+    <div class="cheat-section-title">Green Bean Drop</div>
+    <div class="cheat-row"><span class="cr-label">Drum Temp</span><span class="cr-value"><span class="highlight">${p.chargeTempF}°F</span></span></div>
+    <div class="cheat-row"><span class="cr-label">Gas</span><span class="cr-value"><span class="highlight">${p.chargeGas}</span></span></div>
+    <div class="cheat-row"><span class="cr-label">Airflow</span><span class="cr-value">Through cooling bin</span></div>
+  </div>`;
+
+  if (p.earlyGas) {
+    html += `<div class="cheat-section">
+      <div class="cheat-section-title">Initial Gas Ramp</div>
+      <div class="cheat-row"><span class="cr-label">at 0:30</span><span class="cr-value">Gas <span class="highlight">${p.earlyGas['30s']}</span></span></div>
+      <div class="cheat-row"><span class="cr-label">at 1:00</span><span class="cr-value">Gas <span class="highlight">${p.earlyGas['60s']}</span></span></div>
+    </div>`;
+  }
+
+  html += `<div class="cheat-section">
+    <div class="cheat-section-title">50/50 Transition</div>
+    <div class="cheat-row"><span class="cr-label">At</span><span class="cr-value">300–320°F</span></div>
+    <div class="cheat-row"><span class="cr-label">Gas</span><span class="cr-value"><span class="highlight">${p.gasAt50_50}</span></span></div>
+  </div>`;
+
+  if (p.rampDown && p.rampDown.length) {
+    html += `<div class="cheat-section">
+      <div class="cheat-section-title">Ramp Down</div>
+      ${p.rampDown.map(s => `<div class="cheat-row"><span class="cr-label">${s.tempF}°F</span><span class="cr-value">Gas <span class="highlight">${s.gas}</span></span></div>`).join('')}
+    </div>`;
+  }
+
+  html += `<div class="cheat-section">
+    <div class="cheat-section-title">First Crack</div>
+    <div class="cheat-row"><span class="cr-label">Expected</span><span class="cr-value">${p.firstCrackExpectedF}°F</span></div>
+    <div class="cheat-row"><span class="cr-label">Gas after</span><span class="cr-value"><span class="highlight">${p.postFirstCrackGas}</span></span></div>
+    <div class="cheat-row"><span class="cr-label">Airflow</span><span class="cr-value">→ Through drum</span></div>
+  </div>`;
+
+  if (p.trackSecondCrack) {
+    html += `<div class="cheat-section">
+      <div class="cheat-section-title">Second Crack</div>
+      <div class="cheat-row"><span class="cr-label">Expected</span><span class="cr-value">${p.secondCrackExpectedF}°F</span></div>
+      <div class="cheat-row"><span class="cr-label">Gas after</span><span class="cr-value"><span class="highlight">${p.secondCrackGas}</span></span></div>
+    </div>`;
+  }
+
+  html += `<div class="cheat-section">
+    <div class="cheat-section-title">Drop</div>
+    ${p.dropPostCrackTime ? `<div class="cheat-row"><span class="cr-label">Time after 1st crack</span><span class="cr-value"><span class="highlight">${p.dropPostCrackTime}</span></span></div>` : ''}
+    <div class="cheat-row"><span class="cr-label">Target temp</span><span class="cr-value"><span class="highlight">${p.dropTargetTempF}</span></span></div>
+  </div>`;
+
+  html += `<div class="weight-override">
+    <span class="field-label">Batch Weight (g) — adjust if needed</span>
+    <input class="field-input" id="input-weight" type="number" inputmode="decimal" value="${p.batchGrams}" />
+  </div>`;
+
+  document.getElementById('overview-content').innerHTML = html;
+}
+
+// ══════════════════════════════════════
+// CUE SYSTEM
+// ══════════════════════════════════════
+function buildCueList(profile) {
+  const cues = [];
+  if (!profile.isDarkRoast) {
+    if (profile.earlyGas) {
+      cues.push({ id: 'gas_30', type: 'time', triggerSeconds: 30, label: '0:30', gas: profile.earlyGas['30s'], airflow: null, airflowDisplay: '✕ Cooling', detail: null });
+      cues.push({ id: 'gas_60', type: 'time', triggerSeconds: 60, label: '1:00', gas: profile.earlyGas['60s'], airflow: null, airflowDisplay: '✕ Cooling', detail: null });
+    }
+    cues.push({ id: 'fifty_fifty', type: 'checkpoint', label: '300–320°F', gas: profile.gasAt50_50, airflow: '50/50', airflowDisplay: '50/50', detail: 'Switch airflow to 50/50 split between cooling bin and drum.' });
+    if (profile.rampDown) {
+      profile.rampDown.forEach((step, i) => {
+        cues.push({ id: `ramp_${i}`, type: 'checkpoint', label: `${step.tempF}°F`, gas: step.gas, airflow: null, airflowDisplay: '50/50', detail: `Decrease gas to ${step.gas}.` });
+      });
+    }
+    cues.push({ id: 'first_crack', type: 'event', eventType: 'fc', label: 'First Crack', gas: profile.postFirstCrackGas, airflow: 'drum', airflowDisplay: '→ Drum', detail: `Expected: ${profile.firstCrackExpectedF}°F. Gas → ${profile.postFirstCrackGas}, airflow → through drum.`, expectedTempF: profile.firstCrackExpectedF });
+    cues.push({ id: 'drop', type: 'event', eventType: 'drop', label: 'Drop', gas: null, airflow: null, airflowDisplay: '→ Drum', detail: `Target: ${profile.dropTargetTempF}. ${profile.dropPostCrackTime ? profile.dropPostCrackTime + ' after 1st crack.' : ''}`, expectedTempF: profile.dropTargetTempF });
+  } else {
+    cues.push({ id: 'fifty_fifty', type: 'checkpoint', label: '300–320°F', gas: 7, airflow: '50/50', airflowDisplay: '50/50', detail: 'Gas drops to 7, airflow → 50/50.' });
+    cues.push({ id: 'first_crack', type: 'event', eventType: 'fc', label: 'First Crack', gas: 6, airflow: 'drum', airflowDisplay: '→ Drum', detail: `Expected: ${profile.firstCrackExpectedF}°F. Gas → 6, airflow → through drum.`, expectedTempF: profile.firstCrackExpectedF });
+    cues.push({ id: 'second_crack', type: 'event', eventType: 'sc', label: 'Second Crack', gas: 5, airflow: null, airflowDisplay: '→ Drum', detail: `Expected: ${profile.secondCrackExpectedF}°F. Gas → 5.`, expectedTempF: profile.secondCrackExpectedF });
+    cues.push({ id: 'drop', type: 'event', eventType: 'drop', label: 'Drop', gas: null, airflow: null, airflowDisplay: '→ Drum', detail: '2:00 after 2nd crack. Temp will exceed 440°F.', expectedTempF: '>440' });
+  }
+  return cues;
+}
+
+// ══════════════════════════════════════
+// GUIDE PANEL RENDERING
+// ══════════════════════════════════════
+function renderGuide() {
+  const panel = document.getElementById('guide-panel');
+  let html = `<div class="guide-title">Roast Guide</div>
+    <table class="guide-table">
+      <thead><tr>
+        <th></th><th>Cue</th><th>Airflow</th><th>Gas</th><th>Temp</th>
+      </tr></thead><tbody>`;
+
+  cueList.forEach((cue, i) => {
+    const state = i < currentCueIndex ? 'completed' : i === currentCueIndex ? 'current' : 'upcoming';
+    const isEvent = cue.type === 'event';
+    const rowClass = `row-${state}${isEvent ? ` row-${cue.eventType}` : ''}`;
+    const statusIcon = state === 'completed' ? '✓' : state === 'current' ? '→' : '○';
+    const canTap = (state !== 'completed') && (isEvent || (cue.type === 'checkpoint' && state === 'current') || (cue.type === 'time' && state === 'current'));
+    const isExpanded = (state === 'current') || (expandedEventIndex === i);
+    const gasDisplay = cue.gas !== null ? cue.gas : '—';
+    const tempDisplay = cue.expectedTempF || '—';
+
+    html += `<tr class="${rowClass} ${canTap ? 'tappable' : ''}" onclick="${canTap ? `handleStepTap(${i})` : ''}">
+      <td class="row-status">${statusIcon}</td>
+      <td class="row-cue">${cue.label}</td>
+      <td class="row-airflow">${cue.airflowDisplay}</td>
+      <td class="row-gas">${gasDisplay}</td>
+      <td>${state === 'completed' ? (cue._loggedTemp ? cue._loggedTemp + '°' : '—') : tempDisplay}</td>
+    </tr>`;
+
+    // Expand row for input
+    if (isExpanded) {
+      html += `<tr class="expand-row"><td colspan="5">
+        <div class="expand-inner">
+          ${cue.detail ? `<div class="expand-detail">${cue.detail}</div>` : ''}
+          <input type="number" inputmode="numeric" class="step-temp-input" id="temp-input-${i}" placeholder="°F" />
+          <span class="step-unit">°F</span>
+          <button class="step-btn step-btn-log" onclick="logFromGuide(${i})">Log</button>
+          <button class="step-btn step-btn-skip" onclick="skipFromGuide(${i})">Skip</button>
+          ${isEvent ? `<button class="step-btn step-btn-cancel" onclick="collapseEvent()">Cancel</button>` : ''}
+        </div>
+      </td></tr>`;
+    }
+  });
+
+  html += '</tbody></table>';
+  panel.innerHTML = html;
+}
+
+function handleStepTap(index) {
+  const cue = cueList[index];
+  const state = index < currentCueIndex ? 'completed' : index === currentCueIndex ? 'current' : 'upcoming';
+
+  if (state === 'completed') return;
+
+  if (cue.type === 'event') {
+    // Toggle expand/collapse
+    if (expandedEventIndex === index) {
+      expandedEventIndex = -1;
+    } else {
+      expandedEventIndex = index;
+    }
+    renderGuide();
+  } else if (cue.type === 'checkpoint' && state === 'current') {
+    // Expand current checkpoint
+    if (expandedEventIndex === index) {
+      expandedEventIndex = -1;
+    } else {
+      expandedEventIndex = index;
+    }
+    renderGuide();
+  }
+}
+
+function collapseEvent() {
+  expandedEventIndex = -1;
+  renderGuide();
+}
+
+// ══════════════════════════════════════
+// LOGGING FROM GUIDE
+// ══════════════════════════════════════
+function logFromGuide(index) {
+  if (!timerRunning && timerSeconds === 0) {
+    alert('Start the timer first.');
+    return;
+  }
+  const cue = cueList[index];
+  const input = document.getElementById('temp-input-' + index);
+  const temp = input && input.value ? Number(input.value) : null;
+  const t = timerSeconds;
+
+  if (cue.type === 'checkpoint' || cue.type === 'time') {
+    cue._loggedTemp = temp;
+    currentRoast.checkpoints.push({ label: cue.label, seconds: t, gas: cue.gas, tempF: temp });
+    addLiveLogRow(cue.label, formatTime(t), temp, `Gas ${cue.gas}`);
+    if (cue.airflow) setAirflow(cue.airflow);
+    if (index === currentCueIndex) { currentCueIndex++; }
+  } else if (cue.type === 'event') {
+    const labels = { fc: 'First Crack', sc: 'Second Crack', drop: 'Drop' };
+    cue._loggedTemp = temp;
+    const event = { type: cue.id, label: labels[cue.eventType] || cue.label, seconds: t, temp };
+    if (cue.gas !== null) event.gasAfter = cue.gas;
+    if (cue.airflow) { event.airflowAfter = cue.airflow; setAirflow(cue.airflow); }
+    currentRoast.events.push(event);
+
+    let extraInfo = '';
+    if (cue.gas !== null) extraInfo = `Gas ${cue.gas}`;
+    addLiveLogRow(cue.label, formatTime(t), temp, extraInfo);
+
+    if (cue.id === 'first_crack') firstCrackSeconds = t;
+    if (cue.id === 'second_crack') secondCrackSeconds = t;
+
+    // Advance cue pointer if this is the current cue
+    if (index === currentCueIndex) { currentCueIndex++; }
+
+    if (cue.id === 'drop') {
+      expandedEventIndex = -1;
+      setTimeout(() => finishRoast(), 400);
+      return;
+    }
+  }
+
+  expandedEventIndex = -1;
+  renderGuide();
+}
+
+function skipFromGuide(index) {
+  if (!timerRunning && timerSeconds === 0) {
+    alert('Start the timer first.');
+    return;
+  }
+  logFromGuide(index); // logs with no temp
+}
+
+// ══════════════════════════════════════
+// BEGIN ROAST
+// ══════════════════════════════════════
+function beginRoast() {
+  const weight = document.getElementById('input-weight').value.trim();
+  if (!weight || isNaN(weight) || Number(weight) <= 0) {
+    alert('Please enter batch weight.');
+    return;
+  }
+  const p = selectedProfile;
+  currentRoast = {
+    profileId: p.id, profileName: p.name,
+    batchGrams: Number(weight), weight: Number(weight),
+    startTime: null, events: [], checkpoints: []
+  };
+
+  cueList = buildCueList(p);
+  currentCueIndex = 0;
+  expandedEventIndex = -1;
+  firstCrackSeconds = null;
+  secondCrackSeconds = null;
+  timerSeconds = 0;
+  timerRunning = false;
+
+  document.getElementById('timer-digits').textContent = '00:00';
+  document.getElementById('timer-digits').classList.remove('running');
+  document.getElementById('timer-status').textContent = 'Ready to roast';
+  document.getElementById('btn-start-pause').textContent = 'Start';
+  document.getElementById('btn-start-pause').classList.remove('paused');
+  document.getElementById('timer-profile-name').textContent = p.name;
+  document.getElementById('timer-weight-display').textContent = weight + 'g · Charge ' + p.chargeTempF + '°F · Gas ' + p.chargeGas;
+  document.getElementById('post-crack-display').style.display = 'none';
+
+  setAirflow('cooling');
+  renderGuide();
+
+  // Clear live log
+  const log = document.getElementById('live-log');
+  log.innerHTML = '<div class="live-log-title">Live Log</div><div class="live-log-empty" id="live-log-empty">No events yet.</div>';
+
+  showScreen('timer');
+}
+
+// ══════════════════════════════════════
+// TIMER
+// ══════════════════════════════════════
+function toggleTimer() {
+  timerRunning ? pauseTimer() : resumeTimer();
+}
+
+function resumeTimer() {
+  if (!currentRoast.startTime && timerSeconds === 0) currentRoast.startTime = new Date().toISOString();
+  timerRunning = true;
+  document.getElementById('btn-start-pause').textContent = 'Pause';
+  document.getElementById('btn-start-pause').classList.add('paused');
+  document.getElementById('timer-status').textContent = 'Roasting...';
+  document.getElementById('timer-digits').classList.add('running');
+  timerInterval = setInterval(() => {
+    timerSeconds++;
+    document.getElementById('timer-digits').textContent = formatTime(timerSeconds);
+    checkTimeCues();
+    updatePostCrackDisplay();
+  }, 1000);
+}
+
+function pauseTimer() {
+  timerRunning = false;
+  clearInterval(timerInterval);
+  document.getElementById('btn-start-pause').textContent = 'Resume';
+  document.getElementById('btn-start-pause').classList.remove('paused');
+  document.getElementById('timer-status').textContent = 'Paused';
+  document.getElementById('timer-digits').classList.remove('running');
+}
+
+function resetTimer() {
+  if (!confirm('Reset timer? Events will be cleared.')) return;
+  pauseTimer();
+  timerSeconds = 0;
+  firstCrackSeconds = null;
+  secondCrackSeconds = null;
+  currentCueIndex = 0;
+  expandedEventIndex = -1;
+  if (currentRoast) { currentRoast.events = []; currentRoast.checkpoints = []; currentRoast.startTime = null; }
+  document.getElementById('timer-digits').textContent = '00:00';
+  document.getElementById('timer-status').textContent = 'Ready to roast';
+  document.getElementById('btn-start-pause').textContent = 'Start';
+  document.getElementById('post-crack-display').style.display = 'none';
+  setAirflow('cooling');
+  renderGuide();
+  const log = document.getElementById('live-log');
+  log.innerHTML = '<div class="live-log-title">Live Log</div><div class="live-log-empty" id="live-log-empty">No events yet.</div>';
+}
+
+function confirmAbort() {
+  if (!confirm('Abort this roast? Nothing will be saved.')) return;
+  pauseTimer();
+  currentRoast = null;
+  showScreen('home');
+}
+
+function checkTimeCues() {
+  if (currentCueIndex >= cueList.length) return;
+  const cue = cueList[currentCueIndex];
+  if (cue.type === 'time' && timerSeconds >= cue.triggerSeconds && !cue._triggered) {
+    // Mark as triggered and auto-expand for temp entry
+    cue._triggered = true;
+    expandedEventIndex = currentCueIndex;
+    renderGuide();
+  }
+}
+
+function updatePostCrackDisplay() {
+  const el = document.getElementById('post-crack-display');
+  if (firstCrackSeconds !== null) {
+    const elapsed = timerSeconds - firstCrackSeconds;
+    el.style.display = 'block';
+    let txt = `Post 1st crack: <span class="pct-time">${formatTime(elapsed)}</span>`;
+    if (secondCrackSeconds !== null) {
+      txt += ` · Post 2nd: <span class="pct-time">${formatTime(timerSeconds - secondCrackSeconds)}</span>`;
+    }
+    el.innerHTML = txt;
+  }
+}
+
+function setAirflow(pos) {
+  document.querySelectorAll('.airflow-pos').forEach(el => el.classList.remove('active'));
+  if (pos === 'cooling') document.getElementById('af-cooling').classList.add('active');
+  if (pos === '50/50') { document.getElementById('af-cooling').classList.add('active'); document.getElementById('af-5050').classList.add('active'); }
+  if (pos === 'drum') document.getElementById('af-drum').classList.add('active');
+}
+
+// ══════════════════════════════════════
+// LIVE LOG
+// ══════════════════════════════════════
+function addLiveLogRow(label, time, temp, extra) {
+  const empty = document.getElementById('live-log-empty');
+  if (empty) empty.remove();
+  const row = document.createElement('div');
+  row.className = 'log-row';
+  row.innerHTML = `
+    <span class="lr-label">${label}</span>
+    <div class="lr-right">
+      <div class="lr-time">${time}</div>
+      ${temp ? `<div class="lr-detail">${temp}°F</div>` : ''}
+      ${extra ? `<div class="lr-detail">${extra}</div>` : ''}
+    </div>
+  `;
+  document.getElementById('live-log').appendChild(row);
+}
+
+// ══════════════════════════════════════
+// FINISH / SUMMARY
+// ══════════════════════════════════════
+function finishRoast() {
+  pauseTimer();
+  currentRoast.totalSeconds = timerSeconds;
+
+  document.getElementById('sum-bean').textContent = currentRoast.profileName;
+  document.getElementById('sum-date').textContent = new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+
+  const fc = currentRoast.events.find(e => e.type === 'first_crack');
+  const sc = currentRoast.events.find(e => e.type === 'second_crack');
+  const drop = currentRoast.events.find(e => e.type === 'drop');
+  const totalTime = timerSeconds;
+  const devTime = fc ? (drop ? drop.seconds - fc.seconds : totalTime - fc.seconds) : null;
+  const devPct = devTime && totalTime ? Math.round((devTime / totalTime) * 100) : null;
+
+  const statsGrid = document.getElementById('stats-grid');
+  statsGrid.innerHTML = '';
+  [
+    { label: 'Total Time', value: formatTime(totalTime) },
+    { label: 'Batch Weight', value: currentRoast.weight + 'g' },
+    fc ? { label: 'First Crack', value: formatTime(fc.seconds), sub: fc.temp ? fc.temp + '°F' : null } : null,
+    devTime !== null ? { label: 'Dev Time', value: formatTime(devTime), sub: devPct ? devPct + '% of roast' : null } : null,
+    sc ? { label: 'Second Crack', value: formatTime(sc.seconds), sub: sc.temp ? sc.temp + '°F' : null } : null,
+    drop ? { label: 'Drop', value: formatTime(drop.seconds), sub: drop.temp ? drop.temp + '°F' : null } : null,
+  ].filter(Boolean).forEach(s => {
+    const card = document.createElement('div');
+    card.className = 'stat-card';
+    card.innerHTML = `<div class="stat-label">${s.label}</div><div class="stat-value">${s.value}</div>${s.sub ? `<div class="stat-sub">${s.sub}</div>` : ''}`;
+    statsGrid.appendChild(card);
+  });
+
+  // Timeline
+  const timeline = document.getElementById('events-timeline');
+  const allEntries = [
+    ...currentRoast.checkpoints.map(c => ({ ...c, _type: 'cp' })),
+    ...currentRoast.events.map(e => ({ ...e, _type: e.type === 'first_crack' ? 'fc' : e.type === 'second_crack' ? 'sc' : e.type === 'drop' ? 'drop' : 'cp' }))
+  ].sort((a, b) => a.seconds - b.seconds);
+
+  if (allEntries.length) {
+    timeline.innerHTML = `<div class="et-label">Event Timeline</div>${allEntries.map(e => `
+      <div class="et-row">
+        <div class="et-dot ${e._type}"></div>
+        <div class="et-name">${e.label}</div>
+        <div class="et-info">
+          <div class="et-time">${formatTime(e.seconds)}</div>
+          ${e.temp || e.tempF ? `<div class="et-temp">${e.temp || e.tempF}°F</div>` : ''}
+        </div>
+      </div>
+    `).join('')}`;
+  } else {
+    timeline.innerHTML = '';
+  }
+
+  // Reset weight & notes
+  document.getElementById('sum-end-weight').value = '';
+  document.getElementById('weight-loss-value').textContent = '—';
+  document.getElementById('sum-notes').value = '';
+
+  showScreen('summary');
+}
+
+function calcWeightLoss() {
+  const endWeight = Number(document.getElementById('sum-end-weight').value);
+  const startWeight = currentRoast ? currentRoast.weight : 0;
+  if (endWeight > 0 && startWeight > 0) {
+    const loss = ((startWeight - endWeight) / startWeight * 100).toFixed(1);
+    document.getElementById('weight-loss-value').textContent = loss + '%';
+  } else {
+    document.getElementById('weight-loss-value').textContent = '—';
+  }
+}
+
+function saveRoast() {
+  const roasts = getRoasts();
+  const endWeight = Number(document.getElementById('sum-end-weight').value) || null;
+  const roast = {
+    id: Date.now().toString(),
+    savedAt: new Date().toISOString(),
+    profileId: currentRoast.profileId,
+    profileName: currentRoast.profileName,
+    beanName: currentRoast.profileName,
+    weight: currentRoast.weight,
+    batchGrams: currentRoast.batchGrams,
+    endWeightGrams: endWeight,
+    weightLossPct: endWeight ? ((currentRoast.weight - endWeight) / currentRoast.weight * 100).toFixed(1) : null,
+    totalSeconds: currentRoast.totalSeconds,
+    events: currentRoast.events,
+    checkpoints: currentRoast.checkpoints,
+    notes: document.getElementById('sum-notes').value.trim()
+  };
+  roasts.push(roast);
+  saveRoasts(roasts);
+  currentRoast = null;
+  showScreen('home');
+}
+
+function discardRoast() {
+  if (!confirm('Discard this roast?')) return;
+  currentRoast = null;
+  showScreen('home');
+}
+
+// ══════════════════════════════════════
+// HISTORY
+// ══════════════════════════════════════
+let historyFilter = 'all';
+let historySort = 'date'; // 'date' or 'profile'
+
+function renderHistory() {
+  const allRoasts = getRoasts().slice().reverse();
+  const controls = document.getElementById('history-controls');
+  const list = document.getElementById('history-list');
+
+  if (!allRoasts.length) {
+    controls.innerHTML = '';
+    list.innerHTML = '<div class="history-empty">No roasts saved yet.<br/>Complete a roast to see it here.</div>';
+    return;
+  }
+
+  // Build filter pills from profiles that have roasts
+  const profileNames = [...new Set(allRoasts.map(r => r.profileName || r.beanName))];
+  controls.innerHTML = `
+    <div class="filter-bar">
+      <button class="filter-pill ${historyFilter === 'all' ? 'active' : ''}" onclick="setHistoryFilter('all')">All (${allRoasts.length})</button>
+      ${profileNames.map(name => {
+        const count = allRoasts.filter(r => (r.profileName || r.beanName) === name).length;
+        return `<button class="filter-pill ${historyFilter === name ? 'active' : ''}" onclick="setHistoryFilter('${name.replace(/'/g, "\\'")}')">${name} (${count})</button>`;
+      }).join('')}
+    </div>
+    <div class="sort-toggle">
+      <button class="sort-btn ${historySort === 'date' ? 'active' : ''}" onclick="setHistorySort('date')">By Date</button>
+      <button class="sort-btn ${historySort === 'profile' ? 'active' : ''}" onclick="setHistorySort('profile')">By Profile</button>
+    </div>
+  `;
+
+  // Filter
+  let roasts = historyFilter === 'all' ? allRoasts : allRoasts.filter(r => (r.profileName || r.beanName) === historyFilter);
+
+  if (!roasts.length) {
+    list.innerHTML = '<div class="history-empty">No roasts match this filter.</div>';
+    return;
+  }
+
+  // Render based on sort mode
+  if (historySort === 'date') {
+    list.innerHTML = renderByDate(roasts);
+  } else {
+    list.innerHTML = renderByProfile(roasts);
+  }
+}
+
+function renderByDate(roasts) {
+  let html = '';
+  let currentMonth = '';
+  roasts.forEach(r => {
+    const d = new Date(r.savedAt);
+    const month = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    if (month !== currentMonth) {
+      currentMonth = month;
+      html += `<div class="history-group-header">${month}</div>`;
+    }
+    html += renderRoastCard(r);
+  });
+  return html;
+}
+
+function renderByProfile(roasts) {
+  let html = '';
+  const grouped = {};
+  roasts.forEach(r => {
+    const name = r.profileName || r.beanName;
+    if (!grouped[name]) grouped[name] = [];
+    grouped[name].push(r);
+  });
+  Object.keys(grouped).sort().forEach(name => {
+    html += `<div class="history-group-header">${name} (${grouped[name].length})</div>`;
+    grouped[name].forEach(r => { html += renderRoastCard(r); });
+  });
+  return html;
+}
+
+function renderRoastCard(r) {
+  const fc = r.events?.find(e => e.type === 'first_crack');
+  return `
+    <div class="history-card" onclick="viewRoast('${r.id}')">
+      <div class="hc-header">
+        <div class="hc-bean">${r.profileName || r.beanName}</div>
+        <div class="hc-date">${formatDate(r.savedAt)}</div>
+      </div>
+      <div class="hc-stats">
+        <div class="hc-stat"><span class="hc-stat-label">Weight</span><span class="hc-stat-value">${r.weight || r.batchGrams}g</span></div>
+        <div class="hc-stat"><span class="hc-stat-label">Time</span><span class="hc-stat-value">${formatTime(r.totalSeconds)}</span></div>
+        ${fc ? `<div class="hc-stat"><span class="hc-stat-label">1C</span><span class="hc-stat-value">${formatTime(fc.seconds)}</span></div>` : ''}
+        ${r.weightLossPct ? `<div class="hc-stat"><span class="hc-stat-label">Loss</span><span class="hc-stat-value">${r.weightLossPct}%</span></div>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+function setHistoryFilter(filter) {
+  historyFilter = filter;
+  renderHistory();
+}
+
+function setHistorySort(sort) {
+  historySort = sort;
+  renderHistory();
+}
+
+let viewingRoastId = null;
+let detailBackTarget = 'history';
+
+function goBackFromDetail() {
+  viewingRoastId = null;
+  showScreen(detailBackTarget);
+}
+
+function viewRoast(id, backTo) {
+  detailBackTarget = backTo || 'history';
+  const roast = getRoasts().find(r => r.id === id);
+  if (!roast) return;
+  viewingRoastId = id;
+
+  const fc = roast.events?.find(e => e.type === 'first_crack');
+  const sc = roast.events?.find(e => e.type === 'second_crack');
+  const drop = roast.events?.find(e => e.type === 'drop');
+  const totalTime = roast.totalSeconds;
+  const devTime = fc ? (drop ? drop.seconds - fc.seconds : totalTime - fc.seconds) : null;
+  const devPct = devTime && totalTime ? Math.round((devTime / totalTime) * 100) : null;
+  const weight = roast.weight || roast.batchGrams;
+
+  let html = `
+    <div class="detail-hero">
+      <h2>${roast.profileName || roast.beanName}</h2>
+      <div class="dh-date">${new Date(roast.savedAt).toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}</div>
+      <button class="btn-secondary" style="margin-top:16px;padding:12px;font-size:0.72rem;" onclick="goBackFromDetail()">← Back</button>
+    </div>
+  `;
+
+  // Stats grid
+  const stats = [
+    { label: 'Total Time', value: formatTime(totalTime) },
+    { label: 'Batch Weight', value: weight + 'g' },
+    fc ? { label: 'First Crack', value: formatTime(fc.seconds), sub: fc.temp ? fc.temp + '°F' : null } : null,
+    devTime !== null ? { label: 'Dev Time', value: formatTime(devTime), sub: devPct ? devPct + '% of roast' : null } : null,
+    sc ? { label: 'Second Crack', value: formatTime(sc.seconds), sub: sc.temp ? sc.temp + '°F' : null } : null,
+    drop ? { label: 'Drop', value: formatTime(drop.seconds), sub: drop.temp ? drop.temp + '°F' : null } : null,
+    roast.endWeightGrams ? { label: 'Roasted Weight', value: roast.endWeightGrams + 'g' } : null,
+    roast.weightLossPct ? { label: 'Weight Loss', value: roast.weightLossPct + '%' } : null,
+  ].filter(Boolean);
+
+  html += `<div class="detail-stats">`;
+  stats.forEach(s => {
+    html += `<div class="detail-stat">
+      <div class="ds-label">${s.label}</div>
+      <div class="ds-value">${s.value}</div>
+      ${s.sub ? `<div class="ds-sub">${s.sub}</div>` : ''}
+    </div>`;
+  });
+  html += `</div>`;
+
+  // Timeline — combine checkpoints + events
+  const checkpoints = (roast.checkpoints || []).map(c => ({
+    label: c.label, seconds: c.seconds, temp: c.tempF, gas: c.gas, _type: 'cp'
+  }));
+  const events = (roast.events || []).map(e => ({
+    label: e.label, seconds: e.seconds, temp: e.temp, gas: e.gasAfter || null,
+    _type: e.type === 'first_crack' ? 'fc' : e.type === 'second_crack' ? 'sc' : e.type === 'drop' ? 'drop' : 'cp'
+  }));
+  const allEntries = [...checkpoints, ...events].sort((a, b) => a.seconds - b.seconds);
+
+  if (allEntries.length) {
+    html += `<div class="detail-section">
+      <div class="detail-section-title">Event Timeline</div>
+      <div class="detail-timeline">
+        ${allEntries.map(e => `
+          <div class="dt-row">
+            <div class="dt-dot ${e._type}"></div>
+            <div class="dt-label">${e.label}</div>
+            <div class="dt-info">
+              <div class="dt-time">${formatTime(e.seconds)}</div>
+              ${e.temp ? `<div class="dt-extra">${e.temp}°F</div>` : ''}
+              ${e.gas !== null && e.gas !== undefined ? `<div class="dt-extra">Gas ${e.gas}</div>` : ''}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>`;
+  }
+
+  // Notes
+  html += `<div class="detail-section">
+    <div class="detail-section-title">Tasting Notes</div>
+    <textarea class="detail-notes-area" id="detail-notes" placeholder="Add tasting notes...">${roast.notes || ''}</textarea>
+    <div class="detail-saved-msg" id="detail-saved-msg">Saved</div>
+  </div>`;
+
+  document.getElementById('detail-content').innerHTML = html;
+
+  // Auto-save notes on blur
+  document.getElementById('detail-notes').addEventListener('blur', function() {
+    saveRoastNotes(id, this.value.trim());
+  });
+
+  // Delete button
+  document.getElementById('btn-delete-roast').onclick = function() {
+    if (!confirm('Delete this roast permanently?')) return;
+    deleteRoast(id);
+  };
+
+  showScreen('detail');
+}
+
+function saveRoastNotes(id, notes) {
+  const roasts = getRoasts();
+  const roast = roasts.find(r => r.id === id);
+  if (!roast) return;
+  roast.notes = notes;
+  saveRoasts(roasts);
+  const msg = document.getElementById('detail-saved-msg');
+  if (msg) {
+    msg.classList.add('visible');
+    setTimeout(() => msg.classList.remove('visible'), 1500);
+  }
+}
+
+function deleteRoast(id) {
+  const roasts = getRoasts().filter(r => r.id !== id);
+  saveRoasts(roasts);
+  viewingRoastId = null;
+  showScreen('history');
+}
+
+// ══════════════════════════════════════
+// BEANS
+// ══════════════════════════════════════
+function renderBeans() {
+  const beans = getBeans();
+  const el = document.getElementById('beans-content');
+  if (!beans.length) {
+    el.innerHTML = '<div class="history-empty">No custom bean profiles yet.<br/>Tap + Add to create one.</div>';
+    return;
+  }
+  el.innerHTML = beans.map(b => `
+    <div class="bean-mgr-card">
+      <div><div class="bmc-name">${b.name}</div>${b.notes ? `<div class="bmc-notes">${b.notes}</div>` : ''}</div>
+      <button class="bmc-delete" onclick="deleteBean('${b.id}')">Delete</button>
+    </div>
+  `).join('');
+}
+
+function deleteBean(id) {
+  if (!confirm('Delete this bean profile?')) return;
+  saveBeans(getBeans().filter(b => b.id !== id));
+  renderBeans();
+}
+
+function showAddBeanModal() {
+  document.getElementById('new-bean-name').value = '';
+  document.getElementById('new-bean-notes').value = '';
+  document.getElementById('modal-add-bean').classList.add('open');
+}
+
+function closeAddBeanModal() { document.getElementById('modal-add-bean').classList.remove('open'); }
+
+function saveNewBean() {
+  const name = document.getElementById('new-bean-name').value.trim();
+  if (!name) { alert('Please enter a bean name.'); return; }
+  const beans = getBeans();
+  beans.push({ id: Date.now().toString(), name, notes: document.getElementById('new-bean-notes').value.trim() });
+  saveBeans(beans);
+  closeAddBeanModal();
+  renderBeans();
+}
+
+// ══════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════
+function formatTime(s) {
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+}
+function formatDate(iso) {
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+// ══════════════════════════════════════
+// INIT
+// ══════════════════════════════════════
+seedProfiles();
+renderHome();
+</script>
+</body>
+</html>
