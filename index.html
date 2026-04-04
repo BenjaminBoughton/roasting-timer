@@ -1255,7 +1255,43 @@
   </div>
 </div>
 
+<!-- ══════════════════════════════════════
+     CONFIRM MODAL (replaces native confirm() for PWA compatibility)
+══════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-confirm">
+  <div class="modal-sheet">
+    <div class="modal-title" id="modal-confirm-title">Confirm</div>
+    <p style="color:var(--cream);font-size:0.82rem;opacity:0.8;line-height:1.5;" id="modal-confirm-msg"></p>
+    <div class="modal-actions">
+      <button class="btn-primary" id="modal-confirm-yes" style="background:var(--red);">Confirm</button>
+      <button class="btn-secondary" id="modal-confirm-no">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <script>
+// ── PWA-safe confirm dialog ──
+function appConfirm(message, title) {
+  return new Promise(resolve => {
+    const overlay = document.getElementById('modal-confirm');
+    document.getElementById('modal-confirm-title').textContent = title || 'Confirm';
+    document.getElementById('modal-confirm-msg').textContent = message;
+    const yesBtn = document.getElementById('modal-confirm-yes');
+    const noBtn  = document.getElementById('modal-confirm-no');
+    function cleanup(result) {
+      yesBtn.removeEventListener('click', onYes);
+      noBtn.removeEventListener('click', onNo);
+      overlay.classList.remove('open');
+      resolve(result);
+    }
+    function onYes() { cleanup(true); }
+    function onNo()  { cleanup(false); }
+    yesBtn.addEventListener('click', onYes);
+    noBtn.addEventListener('click', onNo);
+    overlay.classList.add('open');
+  });
+}
+
 // ══════════════════════════════════════
 // PROFILES — all 11 roast recipes
 // ══════════════════════════════════════
@@ -1733,8 +1769,8 @@ function pauseTimer() {
   document.getElementById('timer-digits').classList.remove('running');
 }
 
-function resetTimer() {
-  if (!confirm('Reset timer? Events will be cleared.')) return;
+async function resetTimer() {
+  if (!await appConfirm('Reset timer? Events will be cleared.', 'Reset')) return;
   pauseTimer();
   timerSeconds = 0;
   firstCrackSeconds = null;
@@ -1752,8 +1788,8 @@ function resetTimer() {
   log.innerHTML = '<div class="live-log-title">Live Log</div><div class="live-log-empty" id="live-log-empty">No events yet.</div>';
 }
 
-function confirmAbort() {
-  if (!confirm('Abort this roast? Nothing will be saved.')) return;
+async function confirmAbort() {
+  if (!await appConfirm('Abort this roast? Nothing will be saved.', 'Abort Roast')) return;
   pauseTimer();
   currentRoast = null;
   showScreen('home');
@@ -1907,8 +1943,8 @@ function saveRoast() {
   showScreen('home');
 }
 
-function discardRoast() {
-  if (!confirm('Discard this roast?')) return;
+async function discardRoast() {
+  if (!await appConfirm('Discard this roast?', 'Discard')) return;
   currentRoast = null;
   showScreen('home');
 }
@@ -2116,8 +2152,8 @@ function viewRoast(id, backTo) {
   });
 
   // Delete button
-  document.getElementById('btn-delete-roast').onclick = function() {
-    if (!confirm('Delete this roast permanently?')) return;
+  document.getElementById('btn-delete-roast').onclick = async function() {
+    if (!await appConfirm('Delete this roast permanently?', 'Delete Roast')) return;
     deleteRoast(id);
   };
 
@@ -2162,8 +2198,8 @@ function renderBeans() {
   `).join('');
 }
 
-function deleteBean(id) {
-  if (!confirm('Delete this bean profile?')) return;
+async function deleteBean(id) {
+  if (!await appConfirm('Delete this bean profile?', 'Delete Bean')) return;
   saveBeans(getBeans().filter(b => b.id !== id));
   renderBeans();
 }
