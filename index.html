@@ -305,6 +305,14 @@
     /* ── TIMER SCREEN ── */
     #screen-timer {
       background: var(--bg);
+      height: 100dvh;
+      overflow: hidden;
+    }
+    .timer-top {
+      flex-shrink: 0;
+    }
+    .timer-scroll {
+      flex: 1;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
     }
@@ -316,10 +324,6 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      position: -webkit-sticky;
-      position: sticky;
-      top: 0;
-      z-index: 10;
     }
     .timer-profile-name {
       font-family: 'Playfair Display', serif;
@@ -333,10 +337,6 @@
     }
 
     .timer-sticky {
-      position: -webkit-sticky;
-      position: sticky;
-      top: 45px; /* below the sticky header */
-      z-index: 9;
       background: var(--bg);
       border-bottom: 1px solid var(--border);
       padding-bottom: 2px;
@@ -1134,42 +1134,46 @@
      TIMER SCREEN
 ══════════════════════════════════════ -->
 <div id="screen-timer" class="screen">
-  <div class="timer-header">
-    <div>
-      <div class="timer-profile-name" id="timer-profile-name">—</div>
-      <div class="timer-weight" id="timer-weight-display">—</div>
-    </div>
-    <button class="nav-btn" onclick="confirmAbort()">Abort</button>
-  </div>
-
-  <div class="timer-sticky">
-    <div class="timer-display">
-      <div class="timer-digits" id="timer-digits">00:00</div>
-      <div class="timer-status" id="timer-status">Ready to roast</div>
+  <div class="timer-top">
+    <div class="timer-header">
+      <div>
+        <div class="timer-profile-name" id="timer-profile-name">—</div>
+        <div class="timer-weight" id="timer-weight-display">—</div>
+      </div>
+      <button class="nav-btn" onclick="confirmAbort()">Abort</button>
     </div>
 
-    <div id="post-crack-display" class="post-crack-timer" style="display:none;"></div>
+    <div class="timer-sticky">
+      <div class="timer-display">
+        <div class="timer-digits" id="timer-digits">00:00</div>
+        <div class="timer-status" id="timer-status">Ready to roast</div>
+      </div>
 
-    <div class="timer-controls">
-      <button class="btn-timer-start" id="btn-start-pause" onclick="toggleTimer()">Start</button>
-      <button class="btn-timer-reset" onclick="resetTimer()">Reset</button>
+      <div id="post-crack-display" class="post-crack-timer" style="display:none;"></div>
+
+      <div class="timer-controls">
+        <button class="btn-timer-start" id="btn-start-pause" onclick="toggleTimer()">Start</button>
+        <button class="btn-timer-reset" onclick="resetTimer()">Reset</button>
+      </div>
+    </div>
+
+    <div class="airflow-label">Airflow</div>
+    <div class="airflow-bar" id="airflow-bar">
+      <div class="airflow-pos active" id="af-cooling">✕ Cooling</div>
+      <div class="airflow-pos" id="af-5050">50/50</div>
+      <div class="airflow-pos" id="af-drum">→ Drum</div>
     </div>
   </div>
 
-  <div class="airflow-label">Airflow</div>
-  <div class="airflow-bar" id="airflow-bar">
-    <div class="airflow-pos active" id="af-cooling">✕ Cooling</div>
-    <div class="airflow-pos" id="af-5050">50/50</div>
-    <div class="airflow-pos" id="af-drum">→ Drum</div>
-  </div>
+  <div class="timer-scroll">
+    <div class="guide-panel" id="guide-panel">
+      <div class="guide-title">Roast Guide</div>
+    </div>
 
-  <div class="guide-panel" id="guide-panel">
-    <div class="guide-title">Roast Guide</div>
-  </div>
-
-  <div class="live-log" id="live-log">
-    <div class="live-log-title">Live Log</div>
-    <div class="live-log-empty" id="live-log-empty">No events yet.</div>
+    <div class="live-log" id="live-log">
+      <div class="live-log-title">Live Log</div>
+      <div class="live-log-empty" id="live-log-empty">No events yet.</div>
+    </div>
   </div>
 </div>
 
