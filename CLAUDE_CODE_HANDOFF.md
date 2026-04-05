@@ -359,23 +359,40 @@ Host anywhere → user visits in Safari/Chrome → "Add to Home Screen" → inst
 
 ---
 
-## V2 Progress (completed)
+## V2 Progress
 
-- ✅ 11 profiles seeded with full roast data
+### Completed
+- ✅ 11 profiles seeded with full roast data (Kona ramp corrected to 10→9→8→7→6)
 - ✅ Profile selector home screen
-- ✅ Pre-roast cheat sheet/overview
-- ✅ Guided timer with table-based cue system, inline temp entry at every step
+- ✅ Pre-roast cheat sheet/overview ("Green Bean Drop", "Initial Gas Ramp", drop shows time-after-1st-crack + target temp)
+- ✅ Guided timer with table-based cue system (columns: Cue, Airflow, Gas, Temp)
+- ✅ Inline temp + gas entry at every step — no overlay numpad
+- ✅ Rampdown steps prefill temp from profile; gas prefilled at all stages but editable
+- ✅ Time-based cues (0:30, 1:00) auto-expand for temp entry instead of auto-skipping
 - ✅ Airflow indicator, post-crack timer
 - ✅ Live log + guide panel split
-- ✅ Weight loss calculation on summary
-- ✅ Roast detail screen (replaced alert() placeholder) with editable notes, auto-save, delete
+- ✅ Cancel out of events without committing (preview what a step entails, then back out)
+- ✅ Weight loss calculation on summary (roasted weight input + auto % calc)
+- ✅ Roast detail screen (replaced alert() placeholder) with editable notes, auto-save on blur, delete with confirmation, back button near profile name
 - ✅ History filtering by profile + sorting by date/profile with month headers
-- ✅ Cancel out of events without committing
+- ✅ Timer persists across tab switches (Date.now()-based, not setInterval counter)
+- ✅ Timer display fixed at top — split layout so clock never scrolls away
+- ✅ Mobile button fixes (native confirm() replaced with custom modal for PWA compatibility)
 - ✅ Deployed to GitHub Pages: https://benjaminboughton.github.io/roasting-timer/
 
+### Work log
+
+**Session 1 (Apr 2–3):** Built v2 from scratch — profile system, guided timer, cue cards, overview screen, summary enhancements. Iterative UI refinements: renamed sections (Charge → Green Bean Drop, Early Gas → Initial Gas Ramp), fixed ramp table layout, restructured Drop section, fixed Kona ramp data.
+
+**Session 2 (Apr 3):** Major timer UI rework — replaced overlay numpad with inline inputs, split guide panel + live log, added cancel on events, added weight loss calc to summary. Deployed to GitHub Pages.
+
+**Session 3 (Apr 5):** Replaced viewRoast() alert with full detail screen. Added history filtering/sorting. Fixed timer persistence across tab switches. Made timer display fixed (non-scrolling). Added prefilled temp/gas at all stages. Confirmed mobile button fixes. Updated handoff doc with scaling roadmap.
+
 ### Still to do
+- **Profile editor** — allow editing/saving profiles on the site without touching code (#1 priority from user feedback)
+- **Temp vs time graph** — visual time series chart of logged temperatures during a roast
+- **Time cue warnings** — 20-second countdown warning for time-based cues; estimated warnings based on historical averages for temp-based cues
 - **Actual vs. expected comparison** on summary/detail screens
-- **Profile editor** — allow tweaking profiles without touching code
 - **Service worker** for offline PWA support (critical for roasteries with spotty WiFi)
 
 ---
