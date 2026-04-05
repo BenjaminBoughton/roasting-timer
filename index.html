@@ -331,9 +331,18 @@
       letter-spacing: 0.06em;
     }
 
+    .timer-sticky {
+      position: sticky;
+      top: 49px; /* below the header */
+      z-index: 9;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 2px;
+    }
+
     .timer-display {
       text-align: center;
-      padding: 20px 24px 12px;
+      padding: 16px 24px 8px;
     }
     .timer-digits {
       font-family: 'DM Mono', monospace;
@@ -368,7 +377,7 @@
     .timer-controls {
       display: flex;
       gap: 10px;
-      padding: 12px 24px 14px;
+      padding: 8px 24px 10px;
     }
     .btn-timer-start {
       flex: 2;
@@ -545,6 +554,20 @@
     }
     .step-temp-input:focus { border-color: var(--amber); }
     .step-temp-input::placeholder { color: var(--muted); font-size: 0.7rem; }
+    .step-gas-input {
+      width: 52px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--amber);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.85rem;
+      padding: 8px 6px;
+      border-radius: 4px;
+      outline: none;
+      text-align: center;
+    }
+    .step-gas-input:focus { border-color: var(--amber); }
+    .step-gas-input::placeholder { color: var(--muted); font-size: 0.7rem; }
     .step-unit { font-size: 0.72rem; color: var(--muted); }
 
     .step-btn {
@@ -1117,16 +1140,18 @@
     <button class="nav-btn" onclick="confirmAbort()">Abort</button>
   </div>
 
-  <div class="timer-display">
-    <div class="timer-digits" id="timer-digits">00:00</div>
-    <div class="timer-status" id="timer-status">Ready to roast</div>
-  </div>
+  <div class="timer-sticky">
+    <div class="timer-display">
+      <div class="timer-digits" id="timer-digits">00:00</div>
+      <div class="timer-status" id="timer-status">Ready to roast</div>
+    </div>
 
-  <div id="post-crack-display" class="post-crack-timer" style="display:none;"></div>
+    <div id="post-crack-display" class="post-crack-timer" style="display:none;"></div>
 
-  <div class="timer-controls">
-    <button class="btn-timer-start" id="btn-start-pause" onclick="toggleTimer()">Start</button>
-    <button class="btn-timer-reset" onclick="resetTimer()">Reset</button>
+    <div class="timer-controls">
+      <button class="btn-timer-start" id="btn-start-pause" onclick="toggleTimer()">Start</button>
+      <button class="btn-timer-reset" onclick="resetTimer()">Reset</button>
+    </div>
   </div>
 
   <div class="airflow-label">Airflow</div>
@@ -1397,6 +1422,8 @@ const DEFAULT_PROFILES = [
 let timerInterval = null;
 let timerSeconds = 0;
 let timerRunning = false;
+let timerStartedAt = null;   // Date.now() when timer was started/resumed
+let timerPausedElapsed = 0;  // seconds accumulated before current run
 let currentRoast = null;
 let selectedProfile = null;
 let cueList = [];
@@ -1586,17 +1613,24 @@ function renderGuide() {
       <td class="row-status">${statusIcon}</td>
       <td class="row-cue">${cue.label}</td>
       <td class="row-airflow">${cue.airflowDisplay}</td>
-      <td class="row-gas">${gasDisplay}</td>
+      <td class="row-gas">${state === 'completed' && cue._loggedGas !== undefined ? cue._loggedGas : gasDisplay}</td>
       <td>${state === 'completed' ? (cue._loggedTemp ? cue._loggedTemp + '°' : '—') : tempDisplay}</td>
     </tr>`;
 
     // Expand row for input
     if (isExpanded) {
+      // Prefill temp for rampdown/checkpoint steps that have an expected temp
+      const prefillTemp = (cue.type === 'checkpoint' && cue.id.startsWith('ramp_') && cue.label) ? cue.label.replace('°F', '') : '';
+      // Prefill gas from profile
+      const prefillGas = cue.gas !== null ? cue.gas : '';
+
       html += `<tr class="expand-row"><td colspan="5">
         <div class="expand-inner">
           ${cue.detail ? `<div class="expand-detail">${cue.detail}</div>` : ''}
-          <input type="number" inputmode="numeric" class="step-temp-input" id="temp-input-${i}" placeholder="°F" />
+          <input type="number" inputmode="numeric" class="step-temp-input" id="temp-input-${i}" placeholder="°F" value="${prefillTemp}" />
           <span class="step-unit">°F</span>
+          <input type="number" inputmode="numeric" class="step-gas-input" id="gas-input-${i}" placeholder="Gas" value="${prefillGas}" />
+          <span class="step-unit">gas</span>
           <button class="step-btn step-btn-log" onclick="logFromGuide(${i})">Log</button>
           <button class="step-btn step-btn-skip" onclick="skipFromGuide(${i})">Skip</button>
           ${isEvent ? `<button class="step-btn step-btn-cancel" onclick="collapseEvent()">Cancel</button>` : ''}
@@ -1648,26 +1682,30 @@ function logFromGuide(index) {
     return;
   }
   const cue = cueList[index];
-  const input = document.getElementById('temp-input-' + index);
-  const temp = input && input.value ? Number(input.value) : null;
+  const tempInput = document.getElementById('temp-input-' + index);
+  const gasInput = document.getElementById('gas-input-' + index);
+  const temp = tempInput && tempInput.value ? Number(tempInput.value) : null;
+  const actualGas = gasInput && gasInput.value !== '' ? Number(gasInput.value) : cue.gas;
   const t = timerSeconds;
 
   if (cue.type === 'checkpoint' || cue.type === 'time') {
     cue._loggedTemp = temp;
-    currentRoast.checkpoints.push({ label: cue.label, seconds: t, gas: cue.gas, tempF: temp });
-    addLiveLogRow(cue.label, formatTime(t), temp, `Gas ${cue.gas}`);
+    cue._loggedGas = actualGas;
+    currentRoast.checkpoints.push({ label: cue.label, seconds: t, gas: actualGas, tempF: temp });
+    addLiveLogRow(cue.label, formatTime(t), temp, actualGas !== null ? `Gas ${actualGas}` : null);
     if (cue.airflow) setAirflow(cue.airflow);
     if (index === currentCueIndex) { currentCueIndex++; }
   } else if (cue.type === 'event') {
     const labels = { fc: 'First Crack', sc: 'Second Crack', drop: 'Drop' };
     cue._loggedTemp = temp;
+    cue._loggedGas = actualGas;
     const event = { type: cue.id, label: labels[cue.eventType] || cue.label, seconds: t, temp };
-    if (cue.gas !== null) event.gasAfter = cue.gas;
+    if (actualGas !== null) event.gasAfter = actualGas;
     if (cue.airflow) { event.airflowAfter = cue.airflow; setAirflow(cue.airflow); }
     currentRoast.events.push(event);
 
     let extraInfo = '';
-    if (cue.gas !== null) extraInfo = `Gas ${cue.gas}`;
+    if (actualGas !== null) extraInfo = `Gas ${actualGas}`;
     addLiveLogRow(cue.label, formatTime(t), temp, extraInfo);
 
     if (cue.id === 'first_crack') firstCrackSeconds = t;
@@ -1718,6 +1756,8 @@ function beginRoast() {
   secondCrackSeconds = null;
   timerSeconds = 0;
   timerRunning = false;
+  timerStartedAt = null;
+  timerPausedElapsed = 0;
 
   document.getElementById('timer-digits').textContent = '00:00';
   document.getElementById('timer-digits').classList.remove('running');
@@ -1748,20 +1788,34 @@ function toggleTimer() {
 function resumeTimer() {
   if (!currentRoast.startTime && timerSeconds === 0) currentRoast.startTime = new Date().toISOString();
   timerRunning = true;
+  timerStartedAt = Date.now();
+  timerPausedElapsed = timerSeconds;
   document.getElementById('btn-start-pause').textContent = 'Pause';
   document.getElementById('btn-start-pause').classList.add('paused');
   document.getElementById('timer-status').textContent = 'Roasting...';
   document.getElementById('timer-digits').classList.add('running');
-  timerInterval = setInterval(() => {
-    timerSeconds++;
+  timerInterval = setInterval(timerTick, 250); // tick faster to stay accurate across tab switches
+}
+
+function timerTick() {
+  if (!timerRunning || !timerStartedAt) return;
+  const now = Date.now();
+  const elapsed = Math.floor((now - timerStartedAt) / 1000);
+  const newSeconds = timerPausedElapsed + elapsed;
+  if (newSeconds !== timerSeconds) {
+    timerSeconds = newSeconds;
     document.getElementById('timer-digits').textContent = formatTime(timerSeconds);
     checkTimeCues();
     updatePostCrackDisplay();
-  }, 1000);
+  }
 }
 
 function pauseTimer() {
+  if (timerRunning && timerStartedAt) {
+    timerSeconds = timerPausedElapsed + Math.floor((Date.now() - timerStartedAt) / 1000);
+  }
   timerRunning = false;
+  timerStartedAt = null;
   clearInterval(timerInterval);
   document.getElementById('btn-start-pause').textContent = 'Resume';
   document.getElementById('btn-start-pause').classList.remove('paused');
@@ -1773,6 +1827,8 @@ async function resetTimer() {
   if (!await appConfirm('Reset timer? Events will be cleared.', 'Reset')) return;
   pauseTimer();
   timerSeconds = 0;
+  timerStartedAt = null;
+  timerPausedElapsed = 0;
   firstCrackSeconds = null;
   secondCrackSeconds = null;
   currentCueIndex = 0;
@@ -2237,6 +2293,13 @@ function formatDate(iso) {
 // ══════════════════════════════════════
 // INIT
 // ══════════════════════════════════════
+// Catch up timer when returning from background tab
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && timerRunning) {
+    timerTick();
+  }
+});
+
 seedProfiles();
 renderHome();
 </script>
