@@ -316,6 +316,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      position: -webkit-sticky;
       position: sticky;
       top: 0;
       z-index: 10;
@@ -332,8 +333,9 @@
     }
 
     .timer-sticky {
+      position: -webkit-sticky;
       position: sticky;
-      top: 49px; /* below the header */
+      top: 45px; /* below the sticky header */
       z-index: 9;
       background: var(--bg);
       border-bottom: 1px solid var(--border);
