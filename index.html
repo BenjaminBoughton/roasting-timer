@@ -370,8 +370,32 @@
     }
 
     .timer-display {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 16px 20px 8px;
+    }
+    .timer-left {
       text-align: center;
-      padding: 16px 24px 8px;
+    }
+    .mini-chart-wrap {
+      flex-shrink: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px;
+    }
+    .mini-chart-wrap canvas {
+      display: block;
+    }
+    .mini-chart-label {
+      font-size: 0.45rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      text-align: center;
+      margin-top: 3px;
     }
     .timer-digits {
       font-family: 'DM Mono', monospace;
@@ -1208,8 +1232,14 @@
 
     <div class="timer-sticky">
       <div class="timer-display">
-        <div class="timer-digits" id="timer-digits">00:00</div>
-        <div class="timer-status" id="timer-status">Ready to roast</div>
+        <div class="timer-left">
+          <div class="timer-digits" id="timer-digits">00:00</div>
+          <div class="timer-status" id="timer-status">Ready to roast</div>
+        </div>
+        <div class="mini-chart-wrap">
+          <canvas id="mini-chart" width="130" height="65"></canvas>
+          <div class="mini-chart-label">Temp °F</div>
+        </div>
       </div>
 
       <div id="post-crack-display" class="post-crack-timer" style="display:none;"></div>
@@ -1769,6 +1799,7 @@ function logFromGuide(index) {
     cue._loggedGas = actualGas;
     currentRoast.checkpoints.push({ label: cue.label, seconds: t, gas: actualGas, tempF: temp });
     addLiveLogRow(cue.label, formatTime(t), temp, actualGas !== null ? `Gas ${actualGas}` : null);
+    addChartPoint(t, temp);
     if (cue.airflow) setAirflow(cue.airflow);
     if (index === currentCueIndex) { currentCueIndex++; }
   } else if (cue.type === 'event') {
@@ -1783,6 +1814,7 @@ function logFromGuide(index) {
     let extraInfo = '';
     if (actualGas !== null) extraInfo = `Gas ${actualGas}`;
     addLiveLogRow(cue.label, formatTime(t), temp, extraInfo);
+    addChartPoint(t, temp);
 
     if (cue.id === 'first_crack') firstCrackSeconds = t;
     if (cue.id === 'second_crack') secondCrackSeconds = t;
@@ -1845,6 +1877,7 @@ function beginRoast() {
   document.getElementById('post-crack-display').style.display = 'none';
   document.getElementById('cue-warning').classList.remove('active');
   lastWarningSecond = -1;
+  clearChart();
 
   setAirflow('cooling');
   renderGuide();
@@ -1918,6 +1951,7 @@ async function resetTimer() {
   document.getElementById('post-crack-display').style.display = 'none';
   document.getElementById('cue-warning').classList.remove('active');
   lastWarningSecond = -1;
+  clearChart();
   setAirflow('cooling');
   renderGuide();
   const log = document.getElementById('live-log');
@@ -2023,6 +2057,114 @@ function setAirflow(pos) {
 // ══════════════════════════════════════
 // LIVE LOG
 // ══════════════════════════════════════
+// ══════════════════════════════════════
+// MINI CHART — live temp vs time
+// ══════════════════════════════════════
+let chartPoints = []; // [{ seconds, tempF }]
+
+function addChartPoint(seconds, tempF) {
+  if (tempF == null) return;
+  chartPoints.push({ seconds, tempF });
+  drawMiniChart();
+}
+
+function clearChart() {
+  chartPoints = [];
+  const canvas = document.getElementById('mini-chart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // Draw empty axes
+  drawChartAxes(ctx, canvas.width, canvas.height);
+}
+
+function drawMiniChart() {
+  const canvas = document.getElementById('mini-chart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width;
+  const H = canvas.height;
+  const pad = { top: 4, right: 4, bottom: 14, left: 28 };
+  const plotW = W - pad.left - pad.right;
+  const plotH = H - pad.top - pad.bottom;
+
+  ctx.clearRect(0, 0, W, H);
+
+  if (chartPoints.length === 0) {
+    drawChartAxes(ctx, W, H);
+    return;
+  }
+
+  // Determine ranges
+  const temps = chartPoints.map(p => p.tempF);
+  const times = chartPoints.map(p => p.seconds);
+  const minTemp = Math.min(...temps) - 20;
+  const maxTemp = Math.max(...temps) + 20;
+  const minTime = 0;
+  const maxTime = Math.max(...times, 60); // at least 1 min
+
+  function xPos(s) { return pad.left + (s - minTime) / (maxTime - minTime) * plotW; }
+  function yPos(t) { return pad.top + plotH - ((t - minTemp) / (maxTemp - minTemp) * plotH); }
+
+  // Grid lines
+  ctx.strokeStyle = 'rgba(61, 47, 20, 0.5)';
+  ctx.lineWidth = 0.5;
+  const tempStep = maxTemp - minTemp > 200 ? 100 : 50;
+  for (let t = Math.ceil(minTemp / tempStep) * tempStep; t <= maxTemp; t += tempStep) {
+    const y = yPos(t);
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
+    // Label
+    ctx.fillStyle = '#7a6240';
+    ctx.font = '7px DM Mono, monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(t + '°', pad.left - 3, y + 3);
+  }
+
+  // Time labels
+  ctx.fillStyle = '#7a6240';
+  ctx.font = '7px DM Mono, monospace';
+  ctx.textAlign = 'center';
+  const timeStep = maxTime > 600 ? 300 : maxTime > 120 ? 60 : 30;
+  for (let s = timeStep; s <= maxTime; s += timeStep) {
+    ctx.fillText(formatTime(s), xPos(s), H - 2);
+  }
+
+  // Plot line
+  ctx.strokeStyle = '#e8960c';
+  ctx.lineWidth = 1.5;
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  chartPoints.forEach((p, i) => {
+    const x = xPos(p.seconds);
+    const y = yPos(p.tempF);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // Plot dots
+  chartPoints.forEach(p => {
+    const x = xPos(p.seconds);
+    const y = yPos(p.tempF);
+    ctx.fillStyle = '#e8960c';
+    ctx.beginPath();
+    ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+function drawChartAxes(ctx, W, H) {
+  ctx.strokeStyle = 'rgba(61, 47, 20, 0.3)';
+  ctx.lineWidth = 0.5;
+  ctx.beginPath();
+  ctx.moveTo(28, 4); ctx.lineTo(28, H - 14); ctx.lineTo(W - 4, H - 14);
+  ctx.stroke();
+  ctx.fillStyle = '#7a6240';
+  ctx.font = '7px DM Mono, monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('time', W / 2, H - 2);
+}
+
 function addLiveLogRow(label, time, temp, extra) {
   const empty = document.getElementById('live-log-empty');
   if (empty) empty.remove();
