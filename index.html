@@ -1291,6 +1291,13 @@
     </div>
 
     <div class="stats-grid" id="stats-grid"></div>
+    <div class="detail-section" id="summary-chart-section" style="display:none;">
+      <div class="et-label">Temperature Curve</div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px;">
+        <canvas id="summary-chart" width="320" height="160" style="width:100%;height:auto;"></canvas>
+      </div>
+    </div>
+
     <div class="comparison-section" id="comparison-section"></div>
     <div class="events-timeline" id="events-timeline"></div>
 
@@ -1799,7 +1806,7 @@ function logFromGuide(index) {
     cue._loggedGas = actualGas;
     currentRoast.checkpoints.push({ label: cue.label, seconds: t, gas: actualGas, tempF: temp });
     addLiveLogRow(cue.label, formatTime(t), temp, actualGas !== null ? `Gas ${actualGas}` : null);
-    addChartPoint(t, temp);
+    addChartPoint(t, temp, null);
     if (cue.airflow) setAirflow(cue.airflow);
     if (index === currentCueIndex) { currentCueIndex++; }
   } else if (cue.type === 'event') {
@@ -1814,7 +1821,7 @@ function logFromGuide(index) {
     let extraInfo = '';
     if (actualGas !== null) extraInfo = `Gas ${actualGas}`;
     addLiveLogRow(cue.label, formatTime(t), temp, extraInfo);
-    addChartPoint(t, temp);
+    addChartPoint(t, temp, cue.id);
 
     if (cue.id === 'first_crack') firstCrackSeconds = t;
     if (cue.id === 'second_crack') secondCrackSeconds = t;
@@ -2060,12 +2067,12 @@ function setAirflow(pos) {
 // ══════════════════════════════════════
 // MINI CHART — live temp vs time
 // ══════════════════════════════════════
-let chartPoints = []; // [{ seconds, tempF }]
+let chartPoints = []; // [{ seconds, tempF, eventType }]
 
-function addChartPoint(seconds, tempF) {
+function addChartPoint(seconds, tempF, eventType) {
   if (tempF == null) return;
-  chartPoints.push({ seconds, tempF });
-  drawMiniChart();
+  chartPoints.push({ seconds, tempF, eventType: eventType || null });
+  drawTempChart('mini-chart', chartPoints);
 }
 
 function clearChart() {
@@ -2074,34 +2081,37 @@ function clearChart() {
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  // Draw empty axes
-  drawChartAxes(ctx, canvas.width, canvas.height);
+  drawChartEmpty(ctx, canvas.width, canvas.height);
 }
 
-function drawMiniChart() {
-  const canvas = document.getElementById('mini-chart');
+// Reusable chart renderer — works on any canvas with any point set
+function drawTempChart(canvasId, points, options) {
+  const canvas = document.getElementById(canvasId);
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
   const W = canvas.width;
   const H = canvas.height;
-  const pad = { top: 4, right: 4, bottom: 14, left: 28 };
+  const opts = options || {};
+  const fontSize = opts.fontSize || 7;
+  const dotSize = opts.dotSize || 2.5;
+  const lineWidth = opts.lineWidth || 1.5;
+  const pad = opts.padding || { top: 4, right: 4, bottom: 14, left: 28 };
   const plotW = W - pad.left - pad.right;
   const plotH = H - pad.top - pad.bottom;
 
   ctx.clearRect(0, 0, W, H);
 
-  if (chartPoints.length === 0) {
-    drawChartAxes(ctx, W, H);
+  if (!points || points.length === 0) {
+    drawChartEmpty(ctx, W, H);
     return;
   }
 
-  // Determine ranges
-  const temps = chartPoints.map(p => p.tempF);
-  const times = chartPoints.map(p => p.seconds);
+  const temps = points.map(p => p.tempF);
+  const times = points.map(p => p.seconds);
   const minTemp = Math.min(...temps) - 20;
   const maxTemp = Math.max(...temps) + 20;
   const minTime = 0;
-  const maxTime = Math.max(...times, 60); // at least 1 min
+  const maxTime = Math.max(...times, 60);
 
   function xPos(s) { return pad.left + (s - minTime) / (maxTime - minTime) * plotW; }
   function yPos(t) { return pad.top + plotH - ((t - minTemp) / (maxTemp - minTemp) * plotH); }
@@ -2113,16 +2123,15 @@ function drawMiniChart() {
   for (let t = Math.ceil(minTemp / tempStep) * tempStep; t <= maxTemp; t += tempStep) {
     const y = yPos(t);
     ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
-    // Label
     ctx.fillStyle = '#7a6240';
-    ctx.font = '7px DM Mono, monospace';
+    ctx.font = fontSize + 'px DM Mono, monospace';
     ctx.textAlign = 'right';
     ctx.fillText(t + '°', pad.left - 3, y + 3);
   }
 
   // Time labels
   ctx.fillStyle = '#7a6240';
-  ctx.font = '7px DM Mono, monospace';
+  ctx.font = fontSize + 'px DM Mono, monospace';
   ctx.textAlign = 'center';
   const timeStep = maxTime > 600 ? 300 : maxTime > 300 ? 120 : maxTime > 120 ? 60 : 30;
   for (let s = 0; s <= maxTime; s += timeStep) {
@@ -2131,10 +2140,10 @@ function drawMiniChart() {
 
   // Plot line
   ctx.strokeStyle = '#e8960c';
-  ctx.lineWidth = 1.5;
+  ctx.lineWidth = lineWidth;
   ctx.lineJoin = 'round';
   ctx.beginPath();
-  chartPoints.forEach((p, i) => {
+  points.forEach((p, i) => {
     const x = xPos(p.seconds);
     const y = yPos(p.tempF);
     if (i === 0) ctx.moveTo(x, y);
@@ -2142,18 +2151,54 @@ function drawMiniChart() {
   });
   ctx.stroke();
 
-  // Plot dots
-  chartPoints.forEach(p => {
+  // Plot dots — color by event type
+  points.forEach(p => {
     const x = xPos(p.seconds);
     const y = yPos(p.tempF);
-    ctx.fillStyle = '#e8960c';
+    let color = '#e8960c'; // default amber
+    let r = dotSize;
+    if (p.eventType === 'first_crack') { color = '#c04a2a'; r = dotSize + 1.5; }
+    else if (p.eventType === 'second_crack') { color = '#1a1208'; r = dotSize + 1.5; }
+    else if (p.eventType === 'drop') { color = '#3a6a9a'; r = dotSize + 1; }
+
+    ctx.fillStyle = color;
     ctx.beginPath();
-    ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+    ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fill();
+
+    // Add outline for visibility on dark bg (especially second crack)
+    if (p.eventType === 'second_crack') {
+      ctx.strokeStyle = '#7a6240';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
   });
+
+  // Legend for events if any exist
+  const hasFC = points.some(p => p.eventType === 'first_crack');
+  const hasSC = points.some(p => p.eventType === 'second_crack');
+  if (hasFC || hasSC) {
+    let legendX = W - pad.right - 4;
+    ctx.font = (fontSize - 1) + 'px DM Mono, monospace';
+    ctx.textAlign = 'right';
+    if (hasSC) {
+      ctx.fillStyle = '#7a6240';
+      ctx.fillText('2C', legendX, pad.top + 8);
+      ctx.fillStyle = '#1a1208';
+      ctx.beginPath(); ctx.arc(legendX - 14, pad.top + 5, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#7a6240'; ctx.lineWidth = 0.8; ctx.stroke();
+      legendX -= 26;
+    }
+    if (hasFC) {
+      ctx.fillStyle = '#7a6240';
+      ctx.fillText('1C', legendX, pad.top + 8);
+      ctx.fillStyle = '#c04a2a';
+      ctx.beginPath(); ctx.arc(legendX - 14, pad.top + 5, 3, 0, Math.PI * 2); ctx.fill();
+    }
+  }
 }
 
-function drawChartAxes(ctx, W, H) {
+function drawChartEmpty(ctx, W, H) {
   ctx.strokeStyle = 'rgba(61, 47, 20, 0.3)';
   ctx.lineWidth = 0.5;
   ctx.beginPath();
@@ -2163,6 +2208,22 @@ function drawChartAxes(ctx, W, H) {
   ctx.font = '7px DM Mono, monospace';
   ctx.textAlign = 'center';
   ctx.fillText('time', W / 2, H - 2);
+}
+
+// Build chart points from a saved roast
+function buildChartFromRoast(roast) {
+  const points = [];
+  (roast.checkpoints || []).forEach(c => {
+    if (c.tempF != null) points.push({ seconds: c.seconds, tempF: c.tempF, eventType: null });
+  });
+  (roast.events || []).forEach(e => {
+    if (e.temp != null) {
+      const evType = e.type === 'first_crack' ? 'first_crack' : e.type === 'second_crack' ? 'second_crack' : e.type === 'drop' ? 'drop' : null;
+      points.push({ seconds: e.seconds, tempF: e.temp, eventType: evType });
+    }
+  });
+  points.sort((a, b) => a.seconds - b.seconds);
+  return points;
 }
 
 function addLiveLogRow(label, time, temp, extra) {
@@ -2213,6 +2274,24 @@ function finishRoast() {
     card.innerHTML = `<div class="stat-label">${s.label}</div><div class="stat-value">${s.value}</div>${s.sub ? `<div class="stat-sub">${s.sub}</div>` : ''}`;
     statsGrid.appendChild(card);
   });
+
+  // Summary chart from live data
+  const chartSection = document.getElementById('summary-chart-section');
+  if (chartPoints.length >= 2) {
+    chartSection.style.display = 'block';
+    setTimeout(() => {
+      const canvas = document.getElementById('summary-chart');
+      canvas.width = canvas.offsetWidth * 2;
+      canvas.height = Math.round(canvas.offsetWidth * 0.5) * 2;
+      canvas.style.height = Math.round(canvas.offsetWidth * 0.5) + 'px';
+      drawTempChart('summary-chart', chartPoints, {
+        fontSize: 11, dotSize: 4, lineWidth: 2,
+        padding: { top: 8, right: 8, bottom: 22, left: 40 }
+      });
+    }, 50);
+  } else {
+    chartSection.style.display = 'none';
+  }
 
   // Actual vs Expected comparison
   const compSection = document.getElementById('comparison-section');
@@ -2476,6 +2555,17 @@ function viewRoast(id, backTo) {
   });
   html += `</div>`;
 
+  // Temperature chart from saved data
+  const roastChartPoints = buildChartFromRoast(roast);
+  if (roastChartPoints.length >= 2) {
+    html += `<div class="detail-section">
+      <div class="detail-section-title">Temperature Curve</div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px;">
+        <canvas id="detail-chart" width="320" height="160" style="width:100%;height:auto;"></canvas>
+      </div>
+    </div>`;
+  }
+
   // Actual vs Expected comparison
   const profile = getProfiles().find(p => p.id === roast.profileId);
   if (profile) {
@@ -2551,6 +2641,22 @@ function viewRoast(id, backTo) {
   </div>`;
 
   document.getElementById('detail-content').innerHTML = html;
+
+  // Render chart if we have data
+  if (roastChartPoints.length >= 2) {
+    setTimeout(() => {
+      const canvas = document.getElementById('detail-chart');
+      if (canvas) {
+        canvas.width = canvas.offsetWidth * 2;
+        canvas.height = Math.round(canvas.offsetWidth * 0.5) * 2;
+        canvas.style.height = Math.round(canvas.offsetWidth * 0.5) + 'px';
+        drawTempChart('detail-chart', roastChartPoints, {
+          fontSize: 11, dotSize: 4, lineWidth: 2,
+          padding: { top: 8, right: 8, bottom: 22, left: 40 }
+        });
+      }
+    }, 50);
+  }
 
   // Auto-save notes on blur
   document.getElementById('detail-notes').addEventListener('blur', function() {
