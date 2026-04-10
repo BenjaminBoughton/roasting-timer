@@ -2124,8 +2124,8 @@ function drawMiniChart() {
   ctx.fillStyle = '#7a6240';
   ctx.font = '7px DM Mono, monospace';
   ctx.textAlign = 'center';
-  const timeStep = maxTime > 600 ? 300 : maxTime > 120 ? 60 : 30;
-  for (let s = timeStep; s <= maxTime; s += timeStep) {
+  const timeStep = maxTime > 600 ? 300 : maxTime > 300 ? 120 : maxTime > 120 ? 60 : 30;
+  for (let s = 0; s <= maxTime; s += timeStep) {
     ctx.fillText(formatTime(s), xPos(s), H - 2);
   }
 
