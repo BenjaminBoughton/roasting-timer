@@ -342,6 +342,33 @@
       padding-bottom: 2px;
     }
 
+    /* ── CUE WARNING ── */
+    .cue-warning {
+      display: none;
+      text-align: center;
+      padding: 8px 24px;
+      background: rgba(232, 150, 12, 0.15);
+      border-bottom: 1px solid var(--amber-dim);
+      animation: warningPulse 1s ease-in-out infinite;
+    }
+    .cue-warning.active { display: block; }
+    .cue-warning-text {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--amber);
+      letter-spacing: 0.05em;
+    }
+    .cue-warning-countdown {
+      font-size: 1.1rem;
+      font-weight: 500;
+      color: var(--cream);
+      margin-left: 6px;
+    }
+    @keyframes warningPulse {
+      0%, 100% { background: rgba(232, 150, 12, 0.1); }
+      50% { background: rgba(232, 150, 12, 0.25); }
+    }
+
     .timer-display {
       text-align: center;
       padding: 16px 24px 8px;
@@ -694,6 +721,42 @@
       color: var(--muted);
       margin-top: 4px;
     }
+
+    /* ── COMPARISON TABLE ── */
+    .comparison-section { margin-bottom: 22px; }
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .comparison-table th {
+      font-size: 0.55rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--cream);
+      opacity: 0.6;
+      padding: 9px 6px;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+      background: rgba(0,0,0,0.08);
+    }
+    .comparison-table th:first-child { text-align: left; padding-left: 12px; }
+    .comparison-table td {
+      font-size: 0.76rem;
+      padding: 8px 6px;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+      color: var(--cream);
+    }
+    .comparison-table td:first-child { text-align: left; padding-left: 12px; font-weight: 500; }
+    .comparison-table tr:last-child td { border-bottom: none; }
+    .comparison-table .expected { color: var(--muted); }
+    .comparison-table .actual { color: var(--amber); }
+    .comparison-table .match { color: var(--green); }
+    .comparison-table .diff { color: var(--orange); }
 
     .events-timeline { margin-bottom: 20px; }
     .et-label {
@@ -1151,6 +1214,11 @@
 
       <div id="post-crack-display" class="post-crack-timer" style="display:none;"></div>
 
+      <div class="cue-warning" id="cue-warning">
+        <span class="cue-warning-text" id="cue-warning-text"></span>
+        <span class="cue-warning-countdown" id="cue-warning-countdown"></span>
+      </div>
+
       <div class="timer-controls">
         <button class="btn-timer-start" id="btn-start-pause" onclick="toggleTimer()">Start</button>
         <button class="btn-timer-reset" onclick="resetTimer()">Reset</button>
@@ -1193,6 +1261,7 @@
     </div>
 
     <div class="stats-grid" id="stats-grid"></div>
+    <div class="comparison-section" id="comparison-section"></div>
     <div class="events-timeline" id="events-timeline"></div>
 
     <div class="weight-out-section">
@@ -1676,6 +1745,7 @@ function handleStepTap(index) {
 
 function collapseEvent() {
   expandedEventIndex = -1;
+  document.getElementById('cue-warning').classList.remove('active');
   renderGuide();
 }
 
@@ -1773,6 +1843,8 @@ function beginRoast() {
   document.getElementById('timer-profile-name').textContent = p.name;
   document.getElementById('timer-weight-display').textContent = weight + 'g · Charge ' + p.chargeTempF + '°F · Gas ' + p.chargeGas;
   document.getElementById('post-crack-display').style.display = 'none';
+  document.getElementById('cue-warning').classList.remove('active');
+  lastWarningSecond = -1;
 
   setAirflow('cooling');
   renderGuide();
@@ -1844,6 +1916,8 @@ async function resetTimer() {
   document.getElementById('timer-status').textContent = 'Ready to roast';
   document.getElementById('btn-start-pause').textContent = 'Start';
   document.getElementById('post-crack-display').style.display = 'none';
+  document.getElementById('cue-warning').classList.remove('active');
+  lastWarningSecond = -1;
   setAirflow('cooling');
   renderGuide();
   const log = document.getElementById('live-log');
@@ -1857,11 +1931,69 @@ async function confirmAbort() {
   showScreen('home');
 }
 
+// ── Audio alerts ──
+let audioCtx = null;
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function playBeep(freq, duration, volume) {
+  try {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = freq || 880;
+    osc.type = 'sine';
+    gain.gain.value = volume || 0.3;
+    osc.start();
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + (duration || 0.15));
+    osc.stop(ctx.currentTime + (duration || 0.15));
+  } catch(e) { /* audio not available */ }
+}
+
+function playWarningBeep() { playBeep(660, 0.12, 0.25); }
+function playCueBeep() { playBeep(880, 0.2, 0.4); playBeep(1100, 0.15, 0.3); }
+
+// ── Cue warnings + checks ──
+let lastWarningSecond = -1;
+
 function checkTimeCues() {
   if (currentCueIndex >= cueList.length) return;
   const cue = cueList[currentCueIndex];
-  if (cue.type === 'time' && timerSeconds >= cue.triggerSeconds && !cue._triggered) {
-    // Mark as triggered and auto-expand for temp entry
+
+  // 5-second warning for time-based cues
+  if (cue.type === 'time' && !cue._triggered) {
+    const warningStart = cue.triggerSeconds - 5;
+    const secondsUntil = cue.triggerSeconds - timerSeconds;
+
+    if (timerSeconds >= warningStart && timerSeconds < cue.triggerSeconds) {
+      // Show warning
+      const el = document.getElementById('cue-warning');
+      el.classList.add('active');
+      document.getElementById('cue-warning-text').textContent = `${cue.label} — Gas ${cue.gas} in`;
+      document.getElementById('cue-warning-countdown').textContent = `${secondsUntil}s`;
+
+      // Beep once per second during warning
+      if (timerSeconds !== lastWarningSecond) {
+        lastWarningSecond = timerSeconds;
+        playWarningBeep();
+      }
+      return; // don't trigger yet
+    }
+
+    if (timerSeconds >= cue.triggerSeconds) {
+      // Time reached — trigger the cue
+      document.getElementById('cue-warning').classList.remove('active');
+      lastWarningSecond = -1;
+      playCueBeep();
+      cue._triggered = true;
+      expandedEventIndex = currentCueIndex;
+      renderGuide();
+    }
+  } else if (cue.type === 'time' && timerSeconds >= cue.triggerSeconds && !cue._triggered) {
     cue._triggered = true;
     expandedEventIndex = currentCueIndex;
     renderGuide();
@@ -1939,6 +2071,38 @@ function finishRoast() {
     card.innerHTML = `<div class="stat-label">${s.label}</div><div class="stat-value">${s.value}</div>${s.sub ? `<div class="stat-sub">${s.sub}</div>` : ''}`;
     statsGrid.appendChild(card);
   });
+
+  // Actual vs Expected comparison
+  const compSection = document.getElementById('comparison-section');
+  if (selectedProfile && cueList.length) {
+    let compHtml = `<div class="et-label">Actual vs Expected</div>
+      <table class="comparison-table">
+        <thead><tr>
+          <th>Step</th><th>Expected</th><th>Actual</th><th>Gas (E)</th><th>Gas (A)</th>
+        </tr></thead><tbody>`;
+
+    cueList.forEach(cue => {
+      const expectedTemp = cue.expectedTempF || cue.label.replace('°F', '');
+      const actualTemp = cue._loggedTemp != null ? cue._loggedTemp + '°F' : '—';
+      const expectedGas = cue.gas != null ? cue.gas : '—';
+      const actualGas = cue._loggedGas != null ? cue._loggedGas : (cue._loggedTemp != null ? expectedGas : '—');
+      const tempClass = cue._loggedTemp != null ? (String(expectedTemp).includes(String(cue._loggedTemp)) ? 'match' : 'diff') : '';
+      const gasClass = actualGas !== '—' && expectedGas !== '—' ? (Number(actualGas) === Number(expectedGas) ? 'match' : 'diff') : '';
+
+      compHtml += `<tr>
+        <td>${cue.label}</td>
+        <td class="expected">${cue.type === 'time' ? '—' : expectedTemp}</td>
+        <td class="${tempClass}">${actualTemp}</td>
+        <td class="expected">${expectedGas}</td>
+        <td class="${gasClass}">${actualGas}</td>
+      </tr>`;
+    });
+
+    compHtml += '</tbody></table>';
+    compSection.innerHTML = compHtml;
+  } else {
+    compSection.innerHTML = '';
+  }
 
   // Timeline
   const timeline = document.getElementById('events-timeline');
@@ -2169,6 +2333,44 @@ function viewRoast(id, backTo) {
     </div>`;
   });
   html += `</div>`;
+
+  // Actual vs Expected comparison
+  const profile = getProfiles().find(p => p.id === roast.profileId);
+  if (profile) {
+    const expectedCues = buildCueList(profile);
+    const actualCheckpoints = roast.checkpoints || [];
+    const actualEvents = roast.events || [];
+
+    html += `<div class="detail-section">
+      <div class="detail-section-title">Actual vs Expected</div>
+      <table class="comparison-table">
+        <thead><tr><th>Step</th><th>Expected</th><th>Actual</th><th>Gas (E)</th><th>Gas (A)</th></tr></thead><tbody>`;
+
+    expectedCues.forEach(cue => {
+      // Find matching actual data
+      const actualCp = actualCheckpoints.find(c => c.label === cue.label);
+      const actualEv = actualEvents.find(e => e.type === cue.id);
+      const actual = actualCp || actualEv;
+
+      const expectedTemp = cue.expectedTempF || (cue.type === 'time' ? '—' : cue.label.replace('°F', ''));
+      const actualTemp = actual ? (actual.tempF != null ? actual.tempF + '°F' : (actual.temp != null ? actual.temp + '°F' : '—')) : '—';
+      const expectedGas = cue.gas != null ? cue.gas : '—';
+      const actualGas = actual ? (actual.gas != null ? actual.gas : (actual.gasAfter != null ? actual.gasAfter : '—')) : '—';
+
+      const tempClass = actualTemp !== '—' ? (String(expectedTemp).includes(String(parseInt(actualTemp))) ? 'match' : 'diff') : '';
+      const gasClass = actualGas !== '—' && expectedGas !== '—' ? (Number(actualGas) === Number(expectedGas) ? 'match' : 'diff') : '';
+
+      html += `<tr>
+        <td>${cue.label}</td>
+        <td class="expected">${expectedTemp}</td>
+        <td class="${tempClass}">${actualTemp}</td>
+        <td class="expected">${expectedGas}</td>
+        <td class="${gasClass}">${actualGas}</td>
+      </tr>`;
+    });
+
+    html += '</tbody></table></div>';
+  }
 
   // Timeline — combine checkpoints + events
   const checkpoints = (roast.checkpoints || []).map(c => ({
