@@ -385,9 +385,18 @@
       border: 1px solid var(--border);
       border-radius: 6px;
       padding: 6px;
+      min-width: 0;
     }
     .mini-chart-wrap canvas {
       display: block;
+      width: 130px;
+      height: 65px;
+    }
+    @media (max-width: 380px) {
+      .mini-chart-wrap canvas {
+        width: 100px;
+        height: 50px;
+      }
     }
     .mini-chart-label {
       font-size: 0.45rem;
@@ -1245,7 +1254,7 @@
           <div class="timer-status" id="timer-status">Ready to roast</div>
         </div>
         <div class="mini-chart-wrap">
-          <canvas id="mini-chart" width="130" height="65"></canvas>
+          <canvas id="mini-chart"></canvas>
           <div class="mini-chart-label">Temp °F</div>
         </div>
       </div>
@@ -2096,18 +2105,33 @@ function clearChart() {
   chartPoints = [];
   const canvas = document.getElementById('mini-chart');
   if (!canvas) return;
+  initCanvasRetina(canvas);
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawChartEmpty(ctx, canvas.width, canvas.height);
+  drawChartEmpty(ctx, canvas._logicalWidth, canvas._logicalHeight);
+}
+
+function initCanvasRetina(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  // Store logical size for drawing
+  canvas._logicalWidth = rect.width;
+  canvas._logicalHeight = rect.height;
 }
 
 // Reusable chart renderer — works on any canvas with any point set
 function drawTempChart(canvasId, points, options) {
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
+  // Init retina if not already done
+  if (!canvas._logicalWidth) initCanvasRetina(canvas);
   const ctx = canvas.getContext('2d');
-  const W = canvas.width;
-  const H = canvas.height;
+  const W = canvas._logicalWidth || canvas.width;
+  const H = canvas._logicalHeight || canvas.height;
   const opts = options || {};
   const fontSize = opts.fontSize || 7;
   const dotSize = opts.dotSize || 2.5;
@@ -2116,7 +2140,7 @@ function drawTempChart(canvasId, points, options) {
   const plotW = W - pad.left - pad.right;
   const plotH = H - pad.top - pad.bottom;
 
-  ctx.clearRect(0, 0, W, H);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   if (!points || points.length === 0) {
     drawChartEmpty(ctx, W, H);
