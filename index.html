@@ -585,6 +585,14 @@
       gap: 8px;
       align-items: center;
     }
+    .expand-time {
+      font-family: 'DM Mono', monospace;
+      font-size: 1.1rem;
+      font-weight: 500;
+      color: var(--amber);
+      width: 100%;
+      margin-bottom: 4px;
+    }
     .expand-detail {
       width: 100%;
       font-size: 0.73rem;
@@ -1661,7 +1669,7 @@ function renderOverview() {
 
   html += `<div class="cheat-section">
     <div class="cheat-section-title">Drop</div>
-    ${p.dropPostCrackTime ? `<div class="cheat-row"><span class="cr-label">Time after 1st crack</span><span class="cr-value"><span class="highlight">${p.dropPostCrackTime}</span></span></div>` : ''}
+    ${p.dropPostCrackTime ? `<div class="cheat-row"><span class="cr-label">Time after ${p.trackSecondCrack ? '2nd' : '1st'} crack</span><span class="cr-value"><span class="highlight">${p.dropPostCrackTime}</span></span></div>` : ''}
     <div class="cheat-row"><span class="cr-label">Target temp</span><span class="cr-value"><span class="highlight">${p.dropTargetTempF}</span></span></div>
   </div>`;
 
@@ -1738,6 +1746,7 @@ function renderGuide() {
 
       html += `<tr class="expand-row"><td colspan="5">
         <div class="expand-inner">
+          <div class="expand-time" id="expand-time-display">${formatTime(timerSeconds)}</div>
           ${cue.detail ? `<div class="expand-detail">${cue.detail}</div>` : ''}
           <input type="number" inputmode="numeric" class="step-temp-input" id="temp-input-${i}" placeholder="°F" value="${prefillTemp}" />
           <span class="step-unit">°F</span>
@@ -1922,7 +1931,10 @@ function timerTick() {
   const newSeconds = timerPausedElapsed + elapsed;
   if (newSeconds !== timerSeconds) {
     timerSeconds = newSeconds;
-    document.getElementById('timer-digits').textContent = formatTime(timerSeconds);
+    const timeStr = formatTime(timerSeconds);
+    document.getElementById('timer-digits').textContent = timeStr;
+    const expandTime = document.getElementById('expand-time-display');
+    if (expandTime) expandTime.textContent = timeStr;
     checkTimeCues();
     updatePostCrackDisplay();
   }
@@ -2031,13 +2043,18 @@ function checkTimeCues() {
       lastWarningSecond = -1;
       playCueBeep();
       cue._triggered = true;
-      expandedEventIndex = currentCueIndex;
-      renderGuide();
+      // Only re-render if not already expanded (preserves user-typed values)
+      if (expandedEventIndex !== currentCueIndex) {
+        expandedEventIndex = currentCueIndex;
+        renderGuide();
+      }
     }
   } else if (cue.type === 'time' && timerSeconds >= cue.triggerSeconds && !cue._triggered) {
     cue._triggered = true;
-    expandedEventIndex = currentCueIndex;
-    renderGuide();
+    if (expandedEventIndex !== currentCueIndex) {
+      expandedEventIndex = currentCueIndex;
+      renderGuide();
+    }
   }
 }
 
@@ -2634,6 +2651,27 @@ function viewRoast(id, backTo) {
   }
 
   // Notes
+  // Editable weight
+  html += `<div class="detail-section">
+    <div class="detail-section-title">Roasted Weight</div>
+    <div class="weight-out-row">
+      <div>
+        <input class="field-input" id="detail-end-weight" type="number" inputmode="decimal"
+          placeholder="Enter roasted weight (g)"
+          value="${roast.endWeightGrams || ''}"
+          oninput="updateDetailWeightLoss(${weight})"
+          onblur="saveRoastWeight('${roast.id}')" />
+      </div>
+      <div>
+        <div class="weight-loss-display">
+          <div class="weight-loss-value" id="detail-weight-loss">${roast.weightLossPct ? roast.weightLossPct + '%' : '—'}</div>
+          <div class="weight-loss-label">Weight Loss</div>
+        </div>
+      </div>
+    </div>
+    <div class="detail-saved-msg" id="detail-weight-saved-msg">Saved</div>
+  </div>`;
+
   html += `<div class="detail-section">
     <div class="detail-section-title">Tasting Notes</div>
     <textarea class="detail-notes-area" id="detail-notes" placeholder="Add tasting notes...">${roast.notes || ''}</textarea>
@@ -2670,6 +2708,36 @@ function viewRoast(id, backTo) {
   };
 
   showScreen('detail');
+}
+
+function updateDetailWeightLoss(startWeight) {
+  const endWeight = Number(document.getElementById('detail-end-weight').value) || 0;
+  const el = document.getElementById('detail-weight-loss');
+  if (endWeight > 0 && startWeight > 0) {
+    el.textContent = ((startWeight - endWeight) / startWeight * 100).toFixed(1) + '%';
+  } else {
+    el.textContent = '—';
+  }
+}
+
+function saveRoastWeight(id) {
+  const roasts = getRoasts();
+  const roast = roasts.find(r => r.id === id);
+  if (!roast) return;
+  const endWeight = Number(document.getElementById('detail-end-weight').value) || null;
+  const startWeight = roast.weight || roast.batchGrams || 0;
+  roast.endWeightGrams = endWeight;
+  roast.weightLossPct = endWeight && startWeight ? ((startWeight - endWeight) / startWeight * 100).toFixed(1) : null;
+  saveRoasts(roasts);
+
+  // Update display
+  const lossEl = document.getElementById('detail-weight-loss');
+  if (lossEl) lossEl.textContent = roast.weightLossPct ? roast.weightLossPct + '%' : '—';
+  const msg = document.getElementById('detail-weight-saved-msg');
+  if (msg) {
+    msg.classList.add('visible');
+    setTimeout(() => msg.classList.remove('visible'), 1500);
+  }
 }
 
 function saveRoastNotes(id, notes) {
