@@ -389,10 +389,9 @@ Host anywhere → user visits in Safari/Chrome → "Add to Home Screen" → inst
 **Session 3 (Apr 5):** Replaced viewRoast() alert with full detail screen. Added history filtering/sorting. Fixed timer persistence across tab switches. Made timer display fixed (non-scrolling). Added prefilled temp/gas at all stages. Confirmed mobile button fixes. Updated handoff doc with scaling roadmap.
 
 ### Still to do
-- **Profile editor** — allow editing/saving profiles on the site without touching code (#1 priority from user feedback)
-- **Temp vs time graph** — visual time series chart of logged temperatures during a roast
-- **Time cue warnings** — 20-second countdown warning for time-based cues; estimated warnings based on historical averages for temp-based cues
-- **Actual vs. expected comparison** on summary/detail screens
+- **Multi-size profiles** — Each profile (e.g. 100% Kona) needs multiple batch-size variants (2750g, 2200g, 1100g) with different gas schedules for each. Currently you can override the weight number, but the guide still shows the default size's recipe. Implementation: add a `variants` array to each profile, keyed by batch size, each with its own `earlyGas`, `rampDown`, and `postFirstCrackGas`. On the pre-roast screen, selecting a batch size loads that variant's recipe. This is tedious data entry — someone who knows the actual recipes for each size needs to input them.
+- **Profile editor** — allow editing/saving profiles on the site without touching code. Ties into multi-size profiles — the editor should let you add/edit batch-size variants.
+- **Time cue warnings for non-time cues** — estimated warnings based on historical averages for temp-based cues (e.g. "based on your last 5 roasts, 50/50 usually happens around 3:05")
 - **Service worker** for offline PWA support (critical for roasteries with spotty WiFi)
 
 ---
